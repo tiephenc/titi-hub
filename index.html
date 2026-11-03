@@ -57,6 +57,7 @@
   <main id="desktop" aria-label="TITI OS desktop">
     <h1 class="visually-hidden">TITI'S HUB.exe — the desktop that opens every project by Titi</h1>
     <p id="icon-hint" class="visually-hidden">Press Enter to open.</p>
+    <p class="visually-hidden">The room behind the icons is interactive with a mouse or a finger: the computer, books, coffee, lamp, record player, blinds, window, plants and cat all respond. Rain, blinds and music are also in Settings.</p>
     <ul id="desktop-icons" class="icons" aria-label="Applications and shortcuts"></ul>
     <div id="boot-log" class="boot-log" aria-hidden="true"></div>
     <div id="win-layer" class="win-layer"></div>
@@ -71,6 +72,7 @@
     <div class="tb-tasks" aria-label="Open windows" role="group"></div>
     <div class="tb-tray">
       <span class="tray-status" role="status"><span class="status-led" aria-hidden="true"></span><span class="tray-status__label">online</span></span>
+      <button class="tray-btn tray-music" type="button" aria-label="Stop the record" title="TITI FM — stop the record" aria-pressed="false" hidden><svg class="glyph" viewBox="0 0 16 16" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path fill="currentColor" d="M5 1h6v1h2v2h1v2h1v4h-1v2h-1v2h-2v1H5v-1H3v-2H2v-2H1V6h1V4h1V2h2zm2 5v1H6v2h1v1h2V9h1V7H9V6z"/><path fill="#FF4FA0" d="M7 7h2v2H7z"/></svg><span class="eq ambient" aria-hidden="true"><i></i><i></i><i></i></span></button>
       <button class="tray-btn tray-sound" type="button" aria-label="Interface sound" aria-pressed="false"></button>
       <button class="tray-btn tray-kofi" type="button" aria-label="Support my work on Ko-fi" title="Support my work"></button>
       <button class="tray-btn tray-clock mono" type="button"><time>--:--</time></button>
@@ -80,6 +82,7 @@
   <div id="start-menu" class="popover" hidden></div>
   <div id="switcher" class="popover" hidden></div>
   <div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
+  <div id="scene-tip" class="scene-tip" role="tooltip" hidden></div>
 
   <noscript>
     <div class="noscript">

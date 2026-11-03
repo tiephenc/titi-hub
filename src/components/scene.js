@@ -199,17 +199,23 @@ function makePainter(W, H) {
   const inside = (x, y) =>
     x >= 0 && y >= 0 && x < W && y < H && (!clip || (x >= clip.x0 && x < clip.x1 && y >= clip.y0 && y < clip.y1));
 
+  const occ = new Uint8Array(W * H);
   const P = {
     W,
     H,
     img,
+    occ,
+    occluding: false,
     setClip(c) {
       clip = c;
     },
     px(x, y, c) {
       x |= 0;
       y |= 0;
-      if (inside(x, y)) d[y * W + x] = pack(c);
+      if (inside(x, y)) {
+        d[y * W + x] = pack(c);
+        if (P.occluding) occ[y * W + x] = 0;
+      }
     },
     rect(x, y, w, h, c) {
       for (let j = y | 0; j < y + h; j++) for (let i = x | 0; i < x + w; i++) P.px(i, j, c);
@@ -411,7 +417,7 @@ const DIGITS = {
 
 /* ============================================================== scene */
 
-export function createScene(canvas, { lamp = true } = {}) {
+export function createScene(canvas, { lamp = true, rain = true, blinds = false } = {}) {
   const ctx = canvas.getContext("2d", { alpha: false });
   const buffer = document.createElement("canvas");
   const bctx = buffer.getContext("2d", { alpha: false });
@@ -428,6 +434,28 @@ export function createScene(canvas, { lamp = true } = {}) {
   let resizeTimer = 0;
   let dyn = null;
 
+  // Interactive state.
+  let hits = [];
+  let rainOn = rain;
+  let blindPos = blinds ? 1 : 0;
+  let blindTarget = blindPos;
+  let musicOn = false;
+  let coffee = 3;
+  let fanIdx = 0;
+  let catPokeAt = -99;
+  let lastT = 0;
+  let drops = [];
+  let beads = [];
+  let fireflies = [];
+  let notes = [];
+  let lastNote = 0;
+  const FAN_COLORS = ["#FF4FA0", "#4FEAF2", "#B27CFF", "#FFB070"];
+  const glass = document.createElement("canvas");
+  const gctx = glass.getContext("2d");
+  const maskCanvas = document.createElement("canvas");
+  const hit = (id, x0, y0, x1, y1) => hits.push({ id, x0, y0, x1, y1 });
+  const now = () => performance.now() / 1000;
+
   /* ------------------------------------------------------------ layout */
 
   function measure() {
@@ -442,6 +470,8 @@ export function createScene(canvas, { lamp = true } = {}) {
     canvas.style.height = H * PX + "px";
     buffer.width = W;
     buffer.height = H;
+    glass.width = maskCanvas.width = W;
+    glass.height = maskCanvas.height = H;
 
     const portrait = H > W * 1.1;
     const r = Math.round;
@@ -453,8 +483,10 @@ export function createScene(canvas, { lamp = true } = {}) {
           deskX0: -2,
           monX: r(W * 0.42),
           lampX: r(W * 0.84),
-          mugX: r(W * 0.12),
+          mugX: r(W * 0.53),
           pcX: null,
+          turntable: { x: 3, w: 34 },
+          hang: null,
           booksX: r(W * 0.6),
           shelf: { x0: r(W * 0.5), x1: r(W * 0.95), y: r(H * 0.37) },
           poster: null,
@@ -471,6 +503,8 @@ export function createScene(canvas, { lamp = true } = {}) {
           lampX: r(W * 0.75),
           mugX: r(W * 0.64),
           pcX: r(W * 0.86),
+          turntable: { x: r(W * 0.185), w: r(W * 0.108) },
+          hang: { x: Math.min(W - 7, r(W * 0.95) + 11) },
           booksX: r(W * 0.33),
           shelf: { x0: r(W * 0.185), x1: r(W * 0.325), y: r(H * 0.3) },
           poster: { x: r(W * 0.2), y: r(H * 0.41) },
@@ -484,7 +518,15 @@ export function createScene(canvas, { lamp = true } = {}) {
 
   function paint() {
     const P = makePainter(W, H);
+    hits = [];
     dyn = {
+      fairy: [],
+      waters: [],
+      blind: null,
+      mug: null,
+      turntable: null,
+      hang: null,
+      lampBulb: null,
       twinkle: [],
       neon: [],
       beacons: [],
@@ -505,6 +547,37 @@ export function createScene(canvas, { lamp = true } = {}) {
     paintWindowFrame(P);
     paintRoomFront(P);
     bctx.putImageData(P.img, 0, 0);
+    // Mask: where the glass is visible (rain and blinds are drawn only there).
+    const m = new ImageData(W, H);
+    for (let i = 0; i < W * H; i++) m.data[i * 4 + 3] = P.occ[i] ? 255 : 0;
+    maskCanvas.getContext("2d").putImageData(m, 0, 0);
+    seedDynamic();
+  }
+
+  function seedDynamic() {
+    const { win } = L;
+    const vw = win.x1 - win.x0;
+    const vh = win.y1 - win.y0;
+    drops = Array.from({ length: Math.round((vw * vh) / 120) }, () => ({
+      x: win.x0 + Math.random() * (vw + 30),
+      y: win.y0 + Math.random() * vh,
+      len: 3 + Math.floor(Math.random() * 4),
+      v: 80 + Math.random() * 60,
+    }));
+    beads = Array.from({ length: Math.round(vw / 5) }, () => ({
+      x: win.x0 + Math.floor(Math.random() * vw),
+      y: win.y0 + 8 + Math.floor(Math.random() * vh * 0.9),
+      v: 6 + Math.random() * 14,
+      slide: false,
+    }));
+    fireflies = Array.from({ length: L.portrait ? 14 : 26 }, () => ({
+      x: Math.random() * W,
+      y: H * 0.08 + Math.random() * H * 0.62,
+      a: Math.random() * Math.PI * 2,
+      p: Math.random() * Math.PI * 2,
+      s: 4 + Math.random() * 5,
+    }));
+    notes = [];
   }
 
   /* ---------------------------------------------- the view through glass */
@@ -911,6 +984,9 @@ export function createScene(canvas, { lamp = true } = {}) {
       [[0, -6], [1, -8], [2, -7], [3, -9], [4, -6], [-1, -4], [5, -4]].forEach(([dx, dy]) => P.px(px + dx, y + dy, C.leafLit));
       for (let i = 0; i < 12; i++) P.px(px + 5 + (i % 3 === 0 ? 1 : 0), y + 1 + i, i % 2 ? C.leaf : C.leafLit);
       for (let i = 0; i < 7; i++) P.px(px - 1, y + 2 + i, i % 2 ? C.leafLit : C.leaf);
+      hit("shelfbooks", x0, y - 15, bx + 8, y + 1);
+      hit("clock", clx, y - 11, clx + 20, y);
+      hit("plant", px - 2, y - 10, px + 8, y + 14);
     }
 
     // A framed print: a tiny sunset on the sea.
@@ -923,6 +999,7 @@ export function createScene(canvas, { lamp = true } = {}) {
       P.hline(x + 8, x + 13, y + 9, C.sun);
       P.hline(x + 9, x + 12, y + 11, C.glint);
       P.hline(x + 7, x + 14, y + 12, C.glintPink);
+      hit("poster", x - 1, y - 1, x + 23, y + 17);
     }
 
     // 言 in pink neon.
@@ -933,8 +1010,40 @@ export function createScene(canvas, { lamp = true } = {}) {
       const pix = [];
       KANJI.forEach((row, j) => [...row].forEach((ch, i) => ch === "#" && pix.push([x + i, y + j])));
       pix.forEach(([px, py]) => P.px(px, py, "#FF7FBE"));
-      dyn.neon.push({ pix, flicker: 2 });
+      dyn.neon.push({ pix, flicker: 2, room: true });
+      hit("kanji", x - 2, y - 2, x + 11, y + 13);
     }
+    paintHangingPlant(P);
+  }
+
+  function paintHangingPlant(P) {
+    if (!L.hang) return;
+    const { x } = L.hang;
+    const potY = Math.round(H * 0.2);
+    P.line(x, 0, x - 4, potY - 1, "#5A4A78");
+    P.line(x, 0, x + 4, potY - 1, "#5A4A78");
+    P.vline(x, 0, potY - 1, "#3A3050");
+    const k = Math.round(potY * 0.55);
+    P.hline(x - 2, x + 2, k, "#8A7AA8");
+    P.rect(x - 5, potY, 11, 6, C.pot);
+    P.hline(x - 5, x + 5, potY, C.potLit);
+    P.vline(x - 5, potY, potY + 5, C.potLit);
+    P.hline(x - 4, x + 4, potY + 6, C.outline);
+    [[-4, -2], [-2, -3], [0, -4], [2, -3], [4, -2], [-3, -1], [3, -1], [1, -2], [-1, -2], [5, -1], [-5, -1]].forEach(([dx, dy], i) =>
+      P.px(x + dx, potY + dy, i % 2 ? C.leafLit : C.leaf)
+    );
+    dyn.hang = {
+      x,
+      y: potY + 5,
+      vines: [
+        { dx: -5, len: 20, p: 0 },
+        { dx: -2, len: 30, p: 1.3 },
+        { dx: 1, len: 16, p: 2.1 },
+        { dx: 4, len: 25, p: 0.7 },
+        { dx: 6, len: 12, p: 2.9 },
+      ],
+    };
+    hit("plant", x - 9, potY - 6, x + 10, potY + 36);
   }
 
   /* ------------------------------------------------------ window frame */
@@ -968,14 +1077,39 @@ export function createScene(canvas, { lamp = true } = {}) {
       for (let k = 0; k < 6; k++) P.blend(x + k + 4, win.y0 + 14 + k, "#FFFFFF", 0.04);
     }
     P.setClip(null);
+    // From here on, anything painted hides the glass from rain and blinds.
+    for (let y = by + 2; y < win.y1; y++) for (let x = win.x0 - 2; x < win.x1 + 2; x++) P.occ[y * W + x] = 1;
+    P.occluding = true;
+    hit("window", win.x0, win.y0, win.x1, win.y1);
+    hit("blinds", win.x0 - 4, win.y0 - 4, win.x1 + 4, by + 3);
+    dyn.blind = { y: by + 2, cordX: win.x1 - 5 };
     // Sill, and the cat on it.
     P.rect(win.x0 - 7, win.y1 + 3, w + 14, 4, C.sill);
     P.hline(win.x0 - 7, win.x1 + 6, win.y1 + 3, C.sillLit);
     P.rect(win.x0 - 7, win.y1 + 7, w + 14, 1, C.outline);
     if (L.catX) {
       P.spr(CAT, { k: C.catBody, r: C.catRim }, L.catX, win.y1 + 3 - CAT.length);
-      dyn.cat = { x: L.catX + 8, y: win.y1 + 2 };
+      dyn.cat = { x: L.catX + 8, y: win.y1 + 2, hx: L.catX + 3, hy: win.y1 + 3 - CAT.length };
+      hit("cat", L.catX - 1, win.y1 - 9, L.catX + 12, win.y1 + 4);
     }
+    // Plants on the sill.
+    const sy = win.y1 + 3;
+    const p1 = win.x0 + 4;
+    P.rect(p1, sy - 4, 7, 4, C.pot);
+    P.hline(p1, p1 + 6, sy - 4, C.potLit);
+    [[0, -5], [1, -6], [2, -7], [3, -6], [4, -7], [5, -6], [6, -5], [2, -5], [4, -5], [3, -8]].forEach(([dx, dy], i) => P.px(p1 + dx, sy + dy, i % 3 ? C.leafLit : C.leaf));
+    hit("plant", p1 - 1, sy - 9, p1 + 8, sy);
+    const p2 = Math.round(win.x0 + w * 0.27);
+    P.rect(p2, sy - 4, 5, 4, "#7A5A6A");
+    P.hline(p2, p2 + 4, sy - 4, "#9A7A8A");
+    P.rect(p2 + 1, sy - 12, 3, 8, C.leaf);
+    P.vline(p2 + 1, sy - 12, sy - 5, C.leafLit);
+    P.rect(p2 - 1, sy - 9, 2, 1, C.leaf);
+    P.vline(p2 - 1, sy - 11, sy - 9, C.leafLit);
+    P.rect(p2 + 4, sy - 8, 2, 1, C.leaf);
+    P.vline(p2 + 5, sy - 10, sy - 8, C.leafLit);
+    P.px(p2 + 2, sy - 13, "#FF7FBE");
+    hit("plant", p2 - 2, sy - 14, p2 + 7, sy);
     // Fairy lights along the top of the window.
     for (let x = win.x0 - 2; x < win.x1 + 2; x++) {
       const t = (x - win.x0) / w;
@@ -984,7 +1118,7 @@ export function createScene(canvas, { lamp = true } = {}) {
       if ((x - win.x0) % 5 === 0) {
         P.glow(x, y + 1, 4, C.bulb, 0.15);
         P.px(x, y + 1, C.bulb);
-        dyn.bulbs.push({ x, y: y + 1, p: x * 0.37 });
+        dyn.fairy.push({ x, y: y + 1, p: x * 0.37 });
       }
     }
   }
@@ -997,6 +1131,7 @@ export function createScene(canvas, { lamp = true } = {}) {
     const { deskY } = L;
     const x0 = L.deskX0;
     const dd = deskDepth();
+    if (!L.portrait) paintTurntable(P);
     // Desk top, seen slightly from above, lit violet near the window.
     P.rect(x0, deskY, W - x0 + 2, dd, C.desk);
     for (let y = deskY; y < deskY + dd; y++) {
@@ -1017,6 +1152,8 @@ export function createScene(canvas, { lamp = true } = {}) {
     for (let y = deskY + dd + 3; y < H; y++) {
       for (let x = x0 + 2; x < W; x++) if (bayer(x, y) < ((y - deskY) / (H - deskY)) * 0.6) P.px(x, y, C.deskDark);
     }
+    if (L.portrait) paintTurntable(P);
+    else paintDeskCactus(P);
     paintBooks(P);
     paintMonitor(P);
     paintMug(P);
@@ -1024,6 +1161,87 @@ export function createScene(canvas, { lamp = true } = {}) {
     if (L.pcX) paintPC(P);
     if (L.plantX) paintFloorPlant(P);
     paintChair(P);
+  }
+
+  /** A record player — on a low cabinet of records, or on the desk on phones. */
+  function paintTurntable(P) {
+    const T = L.turntable;
+    if (!T) return;
+    let top;
+    if (!L.portrait) {
+      const x0 = T.x;
+      const x1 = T.x + T.w;
+      top = L.deskY + 12;
+      P.rect(x0 - 1, top - 1, x1 - x0 + 2, H - top + 1, C.outline);
+      P.rect(x0, top, x1 - x0, H - top, "#221C2E");
+      P.rect(x0, top, x1 - x0, 3, "#3A2E48");
+      P.hline(x0, x1 - 1, top, "#5A4870");
+      const cw = Math.floor((x1 - x0 - 6) / 2) - 1;
+      const SLEEVES = ["#E07A90", "#6FB7C4", "#F2C46D", "#B27CFF", "#C9B8D8", "#8A5E6A", "#3E5A66", "#FF7FBE"];
+      for (let c = 0; c < 2; c++) {
+        const cx0 = x0 + 3 + c * (cw + 2);
+        const cy0 = top + 6;
+        const ch = 24;
+        P.rect(cx0, cy0, cw, ch, "#100D18");
+        for (let i = 1; i < cw - 1; i++) {
+          const hgt = ch - 3 - ((i * 7 + c * 3) % 5);
+          P.vline(cx0 + i, cy0 + ch - hgt, cy0 + ch - 1, i % 2 ? SLEEVES[(i * 3 + c * 5) % SLEEVES.length] : "#1A1530");
+        }
+        P.hline(cx0, cx0 + cw - 1, cy0 + ch, "#2E2640");
+      }
+      // A small speaker on the cabinet.
+      P.rect(x1 - 9, top - 13, 8, 13, C.outline);
+      P.rect(x1 - 8, top - 12, 6, 11, "#1E1A2A");
+      P.rect(x1 - 7, top - 7, 4, 4, "#3A3550");
+      P.px(x1 - 6, top - 6, "#5A5070");
+      P.px(x1 - 6, top - 10, "#3A3550");
+      dyn.speaker = { x: x1 - 7, y: top - 7 };
+    } else {
+      top = L.deskY;
+    }
+    const pw = 30;
+    const px = L.portrait ? T.x : T.x + 2;
+    const py = top - 6;
+    P.rect(px - 1, py - 1, pw + 2, 8, C.outline);
+    P.rect(px, py, pw, 6, "#5A3E30");
+    P.hline(px, px + pw - 1, py, "#8A6046");
+    P.hline(px, px + pw - 1, py + 5, "#3A2820");
+    P.px(px + 3, py + 3, "#C9B8D8");
+    P.px(px + 6, py + 3, "#5A2030");
+    const rcx = px + 12;
+    const rcy = py - 2;
+    const rx = 10;
+    const ry = 2.6;
+    for (let y = -3; y <= 3; y++) {
+      for (let x = -rx; x <= rx; x++) {
+        const dd = (x * x) / (rx * rx) + (y * y) / (ry * ry);
+        if (dd > 1) continue;
+        P.px(rcx + x, rcy + y, dd > 0.8 ? "#8A8AA0" : dd > 0.5 ? "#141120" : dd > 0.3 ? "#24202F" : dd > 0.08 ? "#141120" : "#E07A90");
+      }
+    }
+    P.px(rcx, rcy, "#F2C46D");
+    const ax = px + pw - 4;
+    const ay = py - 3;
+    P.rect(ax - 1, ay - 1, 3, 3, "#8A8AA0");
+    P.px(ax, ay - 1, "#D9D9E6");
+    dyn.turntable = { cx: rcx, cy: rcy, rx, ry, ax, ay, led: [px + 6, py + 3] };
+    hit("turntable", px - 2, py - 7, px + pw + 2, py + 7);
+  }
+
+  function paintDeskCactus(P) {
+    const x = L.deskX0 + 5;
+    const y = L.deskY + 3;
+    P.rect(x - 1, y - 5, 7, 5, C.outline);
+    P.rect(x, y - 4, 5, 4, "#9A6A52");
+    P.hline(x, x + 4, y - 4, "#C08A6A");
+    P.rect(x + 1, y - 13, 3, 9, "#2E6A50");
+    P.vline(x + 1, y - 13, y - 5, "#4A9A6E");
+    P.rect(x - 1, y - 10, 2, 1, "#2E6A50");
+    P.vline(x - 1, y - 12, y - 10, "#4A9A6E");
+    P.rect(x + 4, y - 8, 2, 1, "#2E6A50");
+    P.vline(x + 5, y - 11, y - 8, "#4A9A6E");
+    [[2, -12], [1, -9], [3, -7], [2, -6]].forEach(([dx, dy]) => P.px(x + dx, y + dy, "#B9E6C8"));
+    hit("plant", x - 2, y - 14, x + 7, y);
   }
 
   /** An empty desk chair, backlit by the window. */
@@ -1079,6 +1297,7 @@ export function createScene(canvas, { lamp = true } = {}) {
     P.rect(wx + 2, wy + wh - 4, 7, 2, C.lampShade);
     P.rect(sx, sy + sh - 2, sw, 2, "#0A1820");
     dyn.screen = { x: wx + 10, y: wy + wh - 4 };
+    hit("computer", x - 1, y - 1, x + mw + 1, y + mh + 9);
     P.glow(L.monX, y + mh / 2, mw * 0.9, C.screenLit, 0.12, { ry: mh * 1.2 });
     P.glow(L.monX, deskY + 1, mw * 0.6, C.screenLit, 0.18, { ry: 3 });
     // Keyboard and mouse.
@@ -1103,6 +1322,7 @@ export function createScene(canvas, { lamp = true } = {}) {
       P.rect(bx, by, w, 2, c);
       P.rect(bx + w - 3, by, 3, 2, C.pages);
     });
+    hit("books", x - 1, y - 19, x + 25, y + 1);
     const hx = x + 6;
     const hy = y - 17;
     P.line(hx, hy + 3, hx + 3, hy, C.headphones);
@@ -1124,6 +1344,8 @@ export function createScene(canvas, { lamp = true } = {}) {
     P.px(x + 6, y + 2, C.mugShade);
     P.px(x + 6, y + 4, C.mugShade);
     dyn.steam = [{ x: x + 2, y: y - 2 }, { x: x + 4, y: y - 3 }];
+    dyn.mug = { x, y };
+    hit("coffee", x - 2, y - 4, x + 10, y + 8);
   }
 
   function lampGeom() {
@@ -1159,6 +1381,8 @@ export function createScene(canvas, { lamp = true } = {}) {
       P.px(sx + (w >> 1), sy + i, C.outline);
     });
     P.hline(sx - 5, sx + 5, sy + 5, lampOn ? C.bulbHot : C.metal);
+    dyn.lampBulb = lampOn ? { x: sx - 5, y: sy + 5, w: 11 } : null;
+    hit("lamp", sx - 8, sy - 2, x + 8, d);
   }
 
   function paintPC(P) {
@@ -1181,11 +1405,13 @@ export function createScene(canvas, { lamp = true } = {}) {
       dyn.fans.push({ cx, cy });
     }
     P.px(x + w - 3, d - h + 2, C.neonCyan);
+    hit("pc", x - 1, d - h - 1, x + w + 1, d);
   }
 
   function paintFloorPlant(P) {
     const x = L.plantX;
     const d = L.deskY;
+    hit("plant", x - 28, d - 44, W, d + 6);
     const rand = rng(9);
     for (let i = 0; i < 9; i++) {
       const ang = -Math.PI / 2 + (rand() - 0.5) * 1.9;
@@ -1209,13 +1435,24 @@ export function createScene(canvas, { lamp = true } = {}) {
     if (!dyn) return;
     const t = now / 1000;
     const live = ambient;
+    const dt = live ? Math.min(0.25, Math.max(0, t - lastT)) : 0;
+    lastT = t;
     const dot = (x, y, c) => {
       ctx.fillStyle = c;
       ctx.fillRect(x, y, 1, 1);
     };
     const { win } = L;
+    const vw = win.x1 - win.x0;
+    const vh = win.y1 - win.y0;
     const inWin = (x, y) => x >= win.x0 && x < win.x1 && y >= win.y0 && y < win.y1;
 
+    // Blinds move toward where they were asked to go.
+    if (blindPos !== blindTarget) {
+      const d = blindTarget - blindPos;
+      blindPos = live ? blindPos + Math.sign(d) * Math.min(Math.abs(d), dt * 0.9) : blindTarget;
+    }
+
+    /* ---- outside */
     for (const s of dyn.twinkle) {
       const on = !live || Math.sin(t * s.rate * 6 + s.p) > -0.6;
       if (!on && s.off) dot(s.x, s.y, s.off);
@@ -1237,10 +1474,10 @@ export function createScene(canvas, { lamp = true } = {}) {
       }
     }
     for (const n of dyn.neon) {
+      if (n.room) continue;
       let on = true;
       if (live && n.flicker === 0) on = t % 7 > 0.18 || t % 0.2 > 0.1;
       if (live && n.flicker === 1) on = !(Math.sin(t * 9.1) > 0.92 && Math.sin(t * 0.7) > 0);
-      if (live && n.flicker === 2) on = !(Math.sin(t * 13) > 0.97 && Math.sin(t * 0.31) > 0.6);
       if (!on) {
         ctx.fillStyle = "#3A1A2E";
         for (const [x, y] of n.pix) ctx.fillRect(x, y, 1, 1);
@@ -1263,18 +1500,17 @@ export function createScene(canvas, { lamp = true } = {}) {
     }
     if (live) {
       for (const g of dyn.gulls) {
-        const x = Math.round(win.x0 + ((g.x - win.x0 + t * g.v * 2) % (win.x1 - win.x0 + 20)) - 10);
+        const x = Math.round(win.x0 + ((g.x - win.x0 + t * g.v * 2) % (vw + 20)) - 10);
         const y = Math.round(g.y + Math.sin(t * 0.8 + g.p) * 2);
         const flap = Math.sin(t * 5 + g.p) > 0;
-        const c = "#E8DDF0";
         const pts = [[x, y], [x - 1, y - (flap ? 1 : 0)], [x + 1, y - (flap ? 1 : 0)]];
         if (flap) pts.push([x - 2, y], [x + 2, y]);
-        for (const [px, py] of pts) if (inWin(px, py)) dot(px, py, c);
+        for (const [px, py] of pts) if (inWin(px, py)) dot(px, py, "#E8DDF0");
       }
       if (dyn.drone) {
         const k = ((t + dyn.drone.t) % 60) / 30;
         if (k <= 1) {
-          const x = Math.round(win.x1 - k * (win.x1 - win.x0));
+          const x = Math.round(win.x1 - k * vw);
           const y = dyn.drone.y + Math.round(Math.sin(t * 1.5) * 1.5);
           if (inWin(x - 1, y) && inWin(x + 1, y)) {
             ctx.fillStyle = C.cable;
@@ -1284,16 +1520,208 @@ export function createScene(canvas, { lamp = true } = {}) {
         }
       }
       for (const b of dyn.bulbs) if (Math.sin(t * 1.3 + b.p) < -0.85) dot(b.x, b.y, "#5A4030");
-      for (const f of dyn.fans) {
-        const a = t * 3 + f.cy;
-        dot(Math.round(f.cx + Math.cos(a) * 2), Math.round(f.cy + Math.sin(a) * 2), "#FFB0D8");
+    }
+
+    /* ---- the glass: rain, then the blinds, masked to where glass shows */
+    gctx.clearRect(0, 0, W, H);
+    if (rainOn) {
+      gctx.fillStyle = "rgba(34, 26, 70, 0.2)";
+      gctx.fillRect(win.x0, win.y0, vw, vh);
+      gctx.globalAlpha = 0.38;
+      gctx.fillStyle = "#B4A6E6";
+      for (const d of drops) {
+        if (live) {
+          d.y += d.v * dt;
+          d.x -= d.v * dt * 0.22;
+          if (d.y > win.y1) {
+            d.y = win.y0 - Math.random() * 20;
+            d.x = win.x0 + Math.random() * (vw + 30);
+          }
+        }
+        for (let i = 0; i < d.len; i++) gctx.fillRect(Math.round(d.x - i * 0.22), Math.round(d.y + i), 1, 1);
       }
-      dyn.steam.forEach((s, i) => {
-        const k = (t * 0.6 + i * 0.5) % 1;
-        if (k < 0.85) dot(Math.round(s.x + Math.sin(t * 2 + i) * 1.2), Math.round(s.y - k * 8), C.steam);
+      gctx.globalAlpha = 1;
+      for (const b of beads) {
+        if (live) {
+          if (!b.slide && Math.random() < dt * 0.05) b.slide = true;
+          if (b.slide) {
+            b.y += b.v * dt;
+            if (b.y > win.y1 - 1) {
+              b.y = win.y0 + 8 + Math.random() * vh * 0.5;
+              b.x = win.x0 + Math.floor(Math.random() * vw);
+              b.slide = false;
+            }
+          }
+        }
+        const by = Math.round(b.y);
+        gctx.fillStyle = "#D6CAF5";
+        gctx.fillRect(b.x, by, 1, 1);
+        gctx.fillStyle = "rgba(20, 14, 40, 0.7)";
+        gctx.fillRect(b.x, by + 1, 1, 1);
+        if (b.slide) {
+          gctx.fillStyle = "rgba(200, 185, 240, 0.25)";
+          gctx.fillRect(b.x, by - 4, 1, 4);
+        }
+      }
+    }
+    if (blindPos > 0.002 && dyn.blind) {
+      const top = dyn.blind.y;
+      const bh = Math.round((win.y1 - top) * blindPos);
+      for (let y = top; y < top + bh; y++) {
+        const r = (y - top) % 4;
+        gctx.fillStyle = r === 3 ? "rgba(8, 6, 18, 0.62)" : r === 0 ? C.blindLit : C.blind;
+        gctx.fillRect(win.x0 - 2, y, vw + 4, 1);
+      }
+      gctx.fillStyle = C.outline;
+      gctx.fillRect(win.x0 - 2, top + bh, vw + 4, 2);
+      gctx.fillStyle = C.frameLit;
+      gctx.fillRect(win.x0 - 2, top + bh, vw + 4, 1);
+    }
+    gctx.globalCompositeOperation = "destination-in";
+    gctx.drawImage(maskCanvas, 0, 0);
+    gctx.globalCompositeOperation = "source-over";
+    ctx.drawImage(glass, 0, 0);
+    // The blind cord, in front.
+    if (dyn.blind) {
+      const top = dyn.blind.y;
+      const end = top + Math.round((win.y1 - top) * blindPos) + 6;
+      ctx.fillStyle = "#4A3D66";
+      ctx.fillRect(dyn.blind.cordX, top, 1, Math.min(end, win.y1 + 2) - top);
+      ctx.fillStyle = "#8A7AA8";
+      ctx.fillRect(dyn.blind.cordX - 1, Math.min(end, win.y1 + 2), 3, 2);
+    }
+
+    /* ---- the room */
+    // Hanging plant, swaying a little.
+    if (dyn.hang) {
+      const { x, y, vines } = dyn.hang;
+      vines.forEach((v, n) => {
+        for (let k = 0; k < v.len; k++) {
+          const sway = live ? Math.sin(t * 0.8 + v.p + k * 0.14) * (k / v.len) * 1.6 : 0;
+          const vx = x + v.dx + Math.round(sway);
+          const vy = y + k;
+          dot(vx, vy, C.leafDark);
+          if (k % 3 === 1) dot(vx + (k % 2 ? 1 : -1), vy, (k + n) % 2 ? C.leafLit : C.leaf);
+          if (k % 3 === 2) dot(vx + (k % 2 ? -1 : 1), vy, C.leaf);
+        }
       });
     }
-    // The shelf clock shows the real time.
+    // Fans (colour can be changed by clicking the PC).
+    if (dyn.fans.length) {
+      const fc = FAN_COLORS[fanIdx];
+      for (const f of dyn.fans) {
+        if (fanIdx) {
+          ctx.fillStyle = fc;
+          for (let a = 0; a < 24; a++) {
+            const ang = (a / 24) * Math.PI * 2;
+            ctx.fillRect(Math.round(f.cx + Math.cos(ang) * 4.5), Math.round(f.cy + Math.sin(ang) * 4.5), 1, 1);
+          }
+        }
+        if (live) {
+          const a = t * 3 + f.cy;
+          dot(Math.round(f.cx + Math.cos(a) * 2), Math.round(f.cy + Math.sin(a) * 2), "#FFE6F2");
+        }
+      }
+    }
+    // Coffee: full, sipped, or empty.
+    if (dyn.mug) {
+      const { x, y } = dyn.mug;
+      if (coffee === 0) {
+        ctx.fillStyle = "#2A2436";
+        ctx.fillRect(x, y, 5, 1);
+      }
+      if (live && coffee > 0) {
+        dyn.steam.slice(0, coffee >= 3 ? 2 : 1).forEach((s, i) => {
+          const k = (t * 0.6 + i * 0.5) % 1;
+          if (k < 0.85) dot(Math.round(s.x + Math.sin(t * 2 + i) * 1.2), Math.round(s.y - k * 8), C.steam);
+        });
+      }
+    }
+    // The record player.
+    if (dyn.turntable) {
+      const { cx, cy, rx, ry, ax, ay, led } = dyn.turntable;
+      dot(led[0], led[1], musicOn ? "#FF4F7A" : "#5A2030");
+      if (musicOn) {
+        const a = live ? t * 4.2 : 0;
+        dot(Math.round(cx + Math.cos(a) * rx * 0.62), Math.round(cy + Math.sin(a) * ry * 0.62), "#6A6088");
+        dot(Math.round(cx + Math.cos(a + Math.PI) * rx * 0.42), Math.round(cy + Math.sin(a + Math.PI) * ry * 0.42), "#4A4466");
+      }
+      const tipX = musicOn ? cx + Math.round(rx * 0.5) : ax + 1;
+      const tipY = musicOn ? cy - 1 : ay + 4;
+      ctx.fillStyle = "#C9C9D8";
+      const steps = Math.max(Math.abs(tipX - ax), Math.abs(tipY - ay));
+      for (let i = 0; i <= steps; i++) ctx.fillRect(Math.round(ax + ((tipX - ax) * i) / steps), Math.round(ay + ((tipY - ay) * i) / steps), 1, 1);
+      ctx.fillStyle = "#8A8AA0";
+      ctx.fillRect(tipX - 1, tipY, 2, 1);
+      if (musicOn && live && t - lastNote > 1.1) {
+        lastNote = t;
+        notes.push({ x: cx - 2 + Math.round(Math.random() * 6), y: cy - 6, born: t, c: Math.random() > 0.5 ? C.neonPink : C.neonCyan, drift: Math.random() * 6 });
+      }
+      if (dyn.speaker && musicOn && live) {
+        const pulse = Math.sin(t * Math.PI * 2 * (74 / 60)) > 0.3;
+        ctx.fillStyle = pulse ? "#6A6088" : "#3A3550";
+        ctx.fillRect(dyn.speaker.x - (pulse ? 1 : 0), dyn.speaker.y - (pulse ? 1 : 0), pulse ? 6 : 4, pulse ? 6 : 4);
+      }
+    }
+    // The cat: tail (faster with music), and a heart when petted.
+    if (dyn.cat) {
+      const speed = musicOn ? 2.6 : 0.9;
+      const up = live && Math.sin(t * speed) > 0.55;
+      const { x, y, hx, hy } = dyn.cat;
+      ctx.fillStyle = C.catBody;
+      ctx.fillRect(x + 1, y, 3, 1);
+      ctx.fillRect(x + 4, up ? y - 2 : y, 1, up ? 3 : 1);
+      ctx.fillRect(x + 5, up ? y - 3 : y, 1, 1);
+      const since = now / 1000 - catPokeAt;
+      if (since >= 0 && since < 1.8) {
+        if (since < 0.5 && Math.floor(since * 10) % 2 === 0) {
+          ctx.fillStyle = "#3A2A55";
+          ctx.fillRect(hx - 2, hy, 1, 1);
+          ctx.fillRect(hx + 3, hy, 1, 1);
+        }
+        const k = since / 1.8;
+        const heart = [".#.#.", "#####", ".###.", "..#.."];
+        ctx.globalAlpha = 1 - k * 0.8;
+        ctx.fillStyle = C.neonPink;
+        heart.forEach((row, j) => [...row].forEach((ch, i) => ch === "#" && ctx.fillRect(hx - 1 + i, hy - 7 - Math.round(k * 8) + j, 1, 1)));
+        ctx.globalAlpha = 1;
+      }
+    }
+    // Water drops on the plants.
+    dyn.waters = dyn.waters.filter((w) => now / 1000 - w.t < 1.6);
+    for (const w of dyn.waters) {
+      const k = (now / 1000 - w.t) / 1.6;
+      if (k < 0.55) {
+        for (let i = 0; i < 4; i++) dot(w.x - 2 + i * 1.5, Math.round(w.y - 10 + (k / 0.55) * 10 + (i % 2) * 2), "#7FC8F0");
+      } else {
+        for (let i = 0; i < 5; i++) {
+          const a = i * 1.26 + k * 3;
+          dot(Math.round(w.x + Math.cos(a) * 4), Math.round(w.y - 2 + Math.sin(a) * 3), i % 2 ? "#B9F0D0" : "#7FC8F0");
+        }
+      }
+    }
+
+    /* ---- blinds down: the room goes dark, the fireflies come out */
+    if (blindPos > 0.002) {
+      ctx.fillStyle = `rgba(5, 4, 15, ${0.5 * blindPos})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+    // Light sources stay bright through the dark.
+    const kanji = dyn.neon.find((n) => n.room);
+    if (kanji) {
+      const off = live && Math.sin(t * 13) > 0.97 && Math.sin(t * 0.31) > 0.6;
+      ctx.fillStyle = off ? "#4A1A38" : "#FF7FBE";
+      for (const [x, y] of kanji.pix) ctx.fillRect(x, y, 1, 1);
+    }
+    for (const b of dyn.fairy) dot(b.x, b.y, live && Math.sin(t * 1.3 + b.p) < -0.85 ? "#5A4030" : C.bulb);
+    if (dyn.lampBulb && blindPos > 0.002) {
+      ctx.fillStyle = C.bulbHot;
+      ctx.fillRect(dyn.lampBulb.x, dyn.lampBulb.y, dyn.lampBulb.w, 1);
+    }
+    if (dyn.screen && (!live || t % 1.1 < 0.6)) {
+      ctx.fillStyle = C.screenHi;
+      ctx.fillRect(dyn.screen.x, dyn.screen.y, 1, 2);
+    }
     if (dyn.clock) {
       const d = new Date();
       const s = String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0");
@@ -1307,17 +1735,48 @@ export function createScene(canvas, { lamp = true } = {}) {
         }
       }
     }
-    if (dyn.screen && (!live || t % 1.1 < 0.6)) {
-      ctx.fillStyle = C.screenHi;
-      ctx.fillRect(dyn.screen.x, dyn.screen.y, 1, 2);
+    // Music notes rising from the record.
+    notes = notes.filter((n) => t - n.born < 3);
+    for (const n of notes) {
+      const k = (t - n.born) / 3;
+      const x = Math.round(n.x + Math.sin(k * 6 + n.drift) * 2 + k * 4);
+      const y = Math.round(n.y - k * 22);
+      ctx.globalAlpha = 1 - k;
+      ctx.fillStyle = n.c;
+      ctx.fillRect(x + 1, y, 2, 1);
+      ctx.fillRect(x + 1, y + 1, 1, 2);
+      ctx.fillRect(x, y + 3, 2, 1);
+      ctx.globalAlpha = 1;
     }
-    if (dyn.cat) {
-      const up = live && Math.sin(t * 0.9) > 0.55;
-      const { x, y } = dyn.cat;
-      ctx.fillStyle = C.catBody;
-      ctx.fillRect(x + 1, y, 3, 1);
-      ctx.fillRect(x + 4, up ? y - 2 : y, 1, up ? 3 : 1);
-      ctx.fillRect(x + 5, up ? y - 3 : y, 1, 1);
+    // Fireflies.
+    const ff = Math.max(0, (blindPos - 0.25) / 0.75);
+    if (ff > 0) {
+      for (const f of fireflies) {
+        if (live) {
+          f.a += (Math.random() - 0.5) * dt * 4;
+          f.x += Math.cos(f.a) * f.s * dt;
+          f.y += Math.sin(f.a) * f.s * 0.7 * dt;
+          if (f.x < 2 || f.x > W - 2) f.a = Math.PI - f.a;
+          if (f.y < 6 || f.y > H * 0.82) f.a = -f.a;
+          f.x = Math.max(2, Math.min(W - 2, f.x));
+          f.y = Math.max(6, Math.min(H * 0.82, f.y));
+        }
+        const glow = (0.55 + 0.45 * Math.sin(t * 1.7 + f.p)) * ff;
+        const x = Math.round(f.x);
+        const y = Math.round(f.y);
+        ctx.globalAlpha = glow * 0.18;
+        ctx.fillStyle = "#3FB8D8";
+        ctx.fillRect(x - 2, y - 1, 5, 3);
+        ctx.fillRect(x - 1, y - 2, 3, 5);
+        ctx.globalAlpha = glow * 0.55;
+        ctx.fillStyle = "#5FD8F0";
+        ctx.fillRect(x - 1, y, 3, 1);
+        ctx.fillRect(x, y - 1, 1, 3);
+        ctx.globalAlpha = Math.min(1, glow * 1.3);
+        ctx.fillStyle = "#E0FDFF";
+        ctx.fillRect(x, y, 1, 1);
+        ctx.globalAlpha = 1;
+      }
     }
   }
 
@@ -1353,6 +1812,10 @@ export function createScene(canvas, { lamp = true } = {}) {
     if (!running() && !document.hidden) frame(performance.now());
   }, 20000);
 
+  function refresh() {
+    if (!running()) frame(performance.now());
+  }
+
   function rebuild() {
     measure();
     paint();
@@ -1381,13 +1844,62 @@ export function createScene(canvas, { lamp = true } = {}) {
       paint();
       frame(performance.now());
     },
-    /** True when the viewport point falls on the desk lamp. */
-    hitsLamp(clientX, clientY) {
-      if (!L) return false;
+    setRain(on) {
+      rainOn = Boolean(on);
+      refresh();
+    },
+    setBlinds(down) {
+      blindTarget = down ? 1 : 0;
+      refresh();
+    },
+    setMusic(on) {
+      musicOn = Boolean(on);
+      if (!on) notes = [];
+      refresh();
+    },
+    /** One sip. Returns how many are left (0 = empty), or -1 if already empty. */
+    sip() {
+      if (coffee === 0) return -1;
+      coffee -= 1;
+      refresh();
+      return coffee;
+    },
+    refill() {
+      coffee = 3;
+      refresh();
+    },
+    pokeCat() {
+      catPokeAt = performance.now() / 1000;
+    },
+    cycleFans() {
+      fanIdx = (fanIdx + 1) % FAN_COLORS.length;
+      refresh();
+      return fanIdx;
+    },
+    water(clientX, clientY) {
+      if (dyn) dyn.waters.push({ x: Math.floor(clientX / PX), y: Math.floor(clientY / PX), t: performance.now() / 1000 });
+    },
+    /** What is under this point of the viewport, if anything. */
+    hitTest(clientX, clientY) {
+      if (!L) return null;
       const x = Math.floor(clientX / PX);
       const y = Math.floor(clientY / PX);
-      const { sx, sy, x: lx, d } = lampGeom();
-      return x >= sx - 8 && x <= lx + 8 && y >= sy - 2 && y <= d;
+      for (let i = hits.length - 1; i >= 0; i--) {
+        const h = hits[i];
+        if (x >= h.x0 && x < h.x1 && y >= h.y0 && y < h.y1) return h.id === "window" && blindPos > 0.5 ? "blinds" : h.id;
+      }
+      return null;
+    },
+    hitsLamp(clientX, clientY) {
+      return this.hitTest(clientX, clientY) === "lamp";
+    },
+    /** Viewport centre of a hit zone (used by tests and keyboard helpers). */
+    locate(id) {
+      const h = [...hits].reverse().find((z) => z.id === id);
+      return h ? { x: ((h.x0 + h.x1) / 2) * PX, y: ((h.y0 + h.y1) / 2) * PX } : null;
+    },
+    state() {
+      return { rain: rainOn, blinds: blindPos, music: musicOn, coffee, fan: fanIdx, fireflies: fireflies.length };
     },
   };
 }

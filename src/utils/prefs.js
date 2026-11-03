@@ -12,6 +12,9 @@ function sanitise(raw) {
   p.sound = p.sound === true;
   p.ambient = p.ambient !== false;
   p.lamp = p.lamp !== false;
+  p.rain = p.rain !== false;
+  p.blinds = p.blinds === true;
+  p.musicVolume = Number.isFinite(Number(p.musicVolume)) ? Math.max(0, Math.min(1, Number(p.musicVolume))) : 0.6;
   p.reducedMotion = typeof p.reducedMotion === "boolean" ? p.reducedMotion : null;
   p.scale = SCALE_STEPS.includes(p.scale) ? p.scale : 1;
   return p;

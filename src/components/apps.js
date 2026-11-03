@@ -9,6 +9,7 @@ import { h, frag } from "../utils/dom.js";
 import { renderIcon, GLYPHS } from "../utils/icons.js";
 import { notify } from "./notify.js";
 import { play } from "../utils/sound.js";
+import * as music from "../utils/music.js";
 
 const icon = (name, cls = "glyph") => frag(`<span class="${cls}">${renderIcon(name)}</span>`);
 const external = (label) => [label, frag(GLYPHS.external), h("span", { class: "visually-hidden" }, " (opens in a new tab)")];
@@ -352,6 +353,22 @@ export function createApps({ wm, prefs }) {
           });
         });
 
+        const volume = h("input", {
+          class: "range",
+          type: "range",
+          min: "0",
+          max: "100",
+          step: "5",
+          "aria-labelledby": "set-Music-volume",
+          oninput: (e) => prefs.set({ musicVolume: Number(e.target.value) / 100 }),
+        });
+        switches.push(() => {
+          const v = Math.round(prefs.get().musicVolume * 100);
+          if (document.activeElement !== volume) volume.value = String(v);
+          volume.style.setProperty("--fill", v + "%");
+          volume.setAttribute("aria-valuetext", v + "%");
+        });
+
         const motionHelp = h("span");
         switches.push(() => {
           motionHelp.textContent =
@@ -371,6 +388,13 @@ export function createApps({ wm, prefs }) {
               set: (v) => prefs.set({ reducedMotion: v }),
             }),
             toggle("lamp", "Desk lamp", "The warm light on the desk."),
+            toggle("rain", "Rain", "Rain on Marseille, and on the window."),
+            toggle("blinds", "Blinds down", "Darkens the room. Something glows."),
+            toggle("record", "Record player", "Lo-fi composed live in your browser.", {
+              get: () => music.isPlaying(),
+              set: () => music.toggleMusic(),
+            }),
+            row("Music volume", null, volume),
             row("Interface scale", "Size of text, icons and windows.", scaleGroup),
             row(
               "Desktop layout",
@@ -408,7 +432,12 @@ export function createApps({ wm, prefs }) {
         );
         const sync = () => switches.forEach((fn) => fn());
         sync();
-        unsubscribe = prefs.subscribe(sync);
+        const offPrefs = prefs.subscribe(sync);
+        const offMusic = music.onMusicChange(sync);
+        unsubscribe = () => {
+          offPrefs();
+          offMusic();
+        };
       },
     });
   }
@@ -558,8 +587,11 @@ export function createApps({ wm, prefs }) {
             line("applications", Object.entries(counts).map(([s, n]) => `${n} ${STATUS_LABELS[s].toLowerCase()}`).join(", ")),
             line("outside", p.ambient && !prefs.reduced() ? "marseille, dusk" : "marseille, dusk (still)"),
             line("lamp", p.lamp ? "on" : "off", p.lamp ? "warm" : "v"),
+            line("rain", p.rain ? "falling" : "none"),
+            line("blinds", p.blinds ? "down — fireflies out" : "up"),
+            line("record", music.isPlaying() ? "TITI FM, side A" : "stopped", music.isPlaying() ? "ok" : "v"),
             line("sound", p.sound ? "on" : "off"),
-            h("p", { class: "k" }, "› the lamp switch is on its shade.")
+            h("p", { class: "k" }, "› everything in the room answers to a click. try the cat.")
           );
         };
         render();

@@ -48,6 +48,9 @@ export const DEFAULT_PREFS = {
   reducedMotion: null, // null = follow the system setting
   scale: 1,
   lamp: true,
+  rain: true,
+  blinds: false,
+  musicVolume: 0.6,
 };
 
 export const SCALE_STEPS = [0.9, 1, 1.15, 1.3];

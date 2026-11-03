@@ -116,6 +116,7 @@ export function runBootLog(el, { lampOn, reduced }) {
     ["desk lamp ..................... ", lampOn ? "on" : "off"],
     ["sky ........................... ", "violet"],
     [isCompact() ? "› tap an icon to open it" : "› double-click an icon to open it", "", "hint"],
+    ["› the room is alive: click around", "", "hint"],
   ];
   el.replaceChildren();
   const delay = reduced ? 0 : 140;

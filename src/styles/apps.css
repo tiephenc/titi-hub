@@ -906,3 +906,53 @@
   color: #fff;
   text-decoration-color: var(--amber);
 }
+
+/* Range input (music volume) */
+.range {
+  width: 8.5rem;
+  height: 1.5rem;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.range::-webkit-slider-runnable-track {
+  height: 6px;
+  background: linear-gradient(90deg, var(--teal) var(--fill, 60%), var(--night-deep) var(--fill, 60%));
+  border: 2px solid var(--line);
+}
+
+.range::-moz-range-track {
+  height: 6px;
+  background: var(--night-deep);
+  border: 2px solid var(--line);
+}
+
+.range::-moz-range-progress {
+  height: 6px;
+  background: var(--teal);
+}
+
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 16px;
+  margin-top: -7px;
+  background: var(--ink);
+  border: 2px solid var(--night-deep);
+  border-radius: 0;
+}
+
+.range::-moz-range-thumb {
+  width: 10px;
+  height: 14px;
+  background: var(--ink);
+  border: 2px solid var(--night-deep);
+  border-radius: 0;
+}
+
+.range:focus-visible {
+  outline-offset: 3px;
+}
