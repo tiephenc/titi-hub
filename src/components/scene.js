@@ -1,10 +1,13 @@
 /**
- * The night room — an original pixel-art wallpaper drawn on a low-resolution
+ * The night room — a bedroom over the rooftops of Marseille, slightly
+ * cyberpunk: tiled roofs, antennas, the harbour cranes, the floodlit
+ * basilica on its hill, and neon. An original pixel-art wallpaper drawn on a low-resolution
  * canvas and scaled up by whole numbers so every pixel stays crisp.
  *
  * Static parts (wall, window frame, skyline, desk, monitor, lamp, glows) are
  * painted once into an offscreen buffer. Each frame only adds what moves:
- * rain on the glass, a few city windows, the beacon, the cursor, the steam.
+ * rain on the glass, city windows, crane lights, neon, the sea, a drone,
+ * the cursor and the steam.
  * Runs at ~12 fps, stops when the tab is hidden, and draws a single still
  * frame when ambient animation or motion is turned off.
  */
@@ -50,6 +53,32 @@ const C = {
   book2: "#4E6267",
   book3: "#6B5640",
   paper: "#9C8D77",
+  glow1: "#1F1C22",
+  glow2: "#2B2226",
+  sea: "#0D1318",
+  seaLine: "#1C252E",
+  hill: "#0E1217",
+  backdrop: "#0A0D11",
+  cityEdge: "#1C232B",
+  basilica: "#5A4836",
+  basilicaLit: "#8A6A4B",
+  gold: "#E6C891",
+  crane: "#1D242C",
+  city: "#141A21",
+  wallNear: "#15151A",
+  windowLit: "#9A7853",
+  windowDark: "#0B0D10",
+  shutter: "#34474A",
+  tile1: "#4A3128",
+  tile2: "#56392D",
+  tileDark: "#33221C",
+  tileLight: "#6B4737",
+  chimney: "#2B221F",
+  chimneyCap: "#3A2E28",
+  antenna: "#2E3640",
+  cable: "#0A0C0F",
+  neonRose: "#D48A9E",
+  neonTeal: "#8CCBCF",
   pages: "#8E989D",
 };
 
@@ -94,7 +123,11 @@ export function createScene(canvas, { lamp = true } = {}) {
   let lastFrame = 0;
   let drops = [];
   let lights = [];
-  let beacon = null;
+  let beacons = [];
+  let neons = [];
+  let sparkles = [];
+  let viewGlows = [];
+  let drone = null;
   let steam = [];
   let resizeTimer = 0;
 
@@ -164,71 +197,12 @@ export function createScene(canvas, { lamp = true } = {}) {
       for (let x = (y / 6) % 2 ? 3 : 0; x < W; x += 6) fill(C.wallDot, x, y, 1, 1);
     }
 
-    // Window: outline, frame, sky.
+    // Window: outline, frame, and the view over the rooftops of Marseille.
     fill(C.outline, win.x0 - 3, win.y0 - 3, win.x1 - win.x0 + 6, win.y1 - win.y0 + 6);
     fill(C.frame, win.x0 - 2, win.y0 - 2, win.x1 - win.x0 + 4, win.y1 - win.y0 + 4);
     fill(C.frameLight, win.x0 - 2, win.y0 - 2, win.x1 - win.x0 + 4, 1);
     const gh = win.y1 - win.y0;
-    for (let y = win.y0; y < win.y1; y++) {
-      const t = ((y - win.y0) / gh) * (C.sky.length - 1);
-      for (let x = win.x0; x < win.x1; x++) {
-        const i = Math.min(C.sky.length - 1, Math.floor(t + bayer(x, y) - 0.5 + 0.5));
-        fill(C.sky[Math.max(0, i)], x, y, 1, 1);
-      }
-    }
-
-    // A few stars between the clouds.
-    for (let i = 0; i < (win.x1 - win.x0) / 6; i++) {
-      const x = win.x0 + Math.floor(rand() * (win.x1 - win.x0));
-      const y = win.y0 + Math.floor(rand() * gh * 0.35);
-      fill(rand() > 0.7 ? "#4A5560" : "#2C3540", x, y, 1, 1);
-    }
-
-    // Skyline: a far layer and a near layer of buildings.
-    const ground = win.y1;
-    lights = [];
-    let tallest = { x: 0, y: ground };
-    const skyline = (color, minH, maxH, minW, maxW, withLights) => {
-      let x = win.x0 - Math.floor(rand() * 4);
-      while (x < win.x1) {
-        const bw = minW + Math.floor(rand() * (maxW - minW));
-        const bh = Math.floor(gh * (minH + rand() * (maxH - minH)));
-        const top = ground - bh;
-        const x0 = Math.max(x, win.x0);
-        const x1 = Math.min(x + bw, win.x1);
-        if (x1 > x0) {
-          fill(color, x0, top, x1 - x0, bh);
-          if (rand() > 0.6 && x1 - x0 > 3) fill(color, x0 + 1, top - 2, Math.max(1, (x1 - x0) >> 1), 2);
-          if (withLights) {
-            if (top < tallest.y) tallest = { x: Math.floor((x0 + x1) / 2), y: top - 3 };
-            for (let wy = top + 2; wy < ground - 1; wy += 2) {
-              for (let wx = x0 + 1; wx < x1 - 1; wx += 2) {
-                const p = rand();
-                if (p < 0.11) {
-                  const tone = rand();
-                  lights.push({
-                    x: wx,
-                    y: wy,
-                    c: tone < 0.62 ? C.amberDim : tone < 0.9 ? C.tealDim : C.amber,
-                    on: rand() > 0.12,
-                  });
-                }
-              }
-            }
-          }
-        }
-        x += bw + (withLights ? 0 : Math.floor(rand() * 3));
-      }
-    };
-    skyline(C.far, 0.35, 0.7, 4, 10, false);
-    // Low haze over the far city.
-    for (let y = ground - Math.floor(gh * 0.3); y < ground; y++) {
-      const k = (y - (ground - gh * 0.3)) / (gh * 0.3);
-      for (let x = win.x0; x < win.x1; x++) if (k * 0.5 > bayer(x, y)) fill(C.haze, x, y, 1, 1);
-    }
-    skyline(C.near, 0.18, 0.48, 5, 13, true);
-    fill(C.near, tallest.x, tallest.y, 1, 3);
-    beacon = { x: tallest.x, y: tallest.y - 1 };
+    paintView(rand);
 
     // Old raindrops drying on the glass.
     for (let i = 0; i < (win.x1 - win.x0) / 9; i++) {
@@ -240,7 +214,7 @@ export function createScene(canvas, { lamp = true } = {}) {
 
     // Mullions and sill.
     const mx = Math.round((win.x0 + win.x1) / 2);
-    const my = win.y0 + Math.round(gh * 0.42);
+    const my = win.y0 + Math.round(gh * 0.26);
     fill(C.frame, mx - 1, win.y0, 2, gh);
     fill(C.frame, win.x0, my, win.x1 - win.x0, 2);
     fill(C.frameLight, mx - 1, win.y0, 1, gh);
@@ -278,12 +252,223 @@ export function createScene(canvas, { lamp = true } = {}) {
     const img = bctx.getImageData(0, 0, W, H);
     const m = monitorBox();
     glow(img, m.x + m.w / 2, m.y + m.h / 2, m.w * 1.25, C.teal, 0.1, 0.55);
+    for (const [gx, gy, r, c, k] of viewGlows) glowIn(img, gx, gy, r, c, k);
     if (lampOn) {
       const s = shadeBox();
       glow(img, s.cx, s.cy + 2, 26, C.amber, 0.09, 0.75);
       cone(img, s.cx, s.cy + 3, deskY + 3, 18, C.amber, 0.16);
     }
     bctx.putImageData(img, 0, 0);
+  }
+
+  /* --------------------------------------------- the view: Marseille rooftops */
+
+  function paintView(rand) {
+    const { win } = L;
+    const gw = win.x1 - win.x0;
+    const gh = win.y1 - win.y0;
+    const g = (c, x, y, w = 1, h = 1) => {
+      const x0 = Math.max(x, win.x0);
+      const y0 = Math.max(y, win.y0);
+      const x1 = Math.min(x + w, win.x1);
+      const y1 = Math.min(y + h, win.y1);
+      if (x1 > x0 && y1 > y0) fill(c, x0, y0, x1 - x0, y1 - y0);
+    };
+    const inGlass = (x, y) => x >= win.x0 && x < win.x1 && y >= win.y0 && y < win.y1;
+
+    lights = [];
+    beacons = [];
+    neons = [];
+    sparkles = [];
+    viewGlows = [];
+
+    // Night-dark backdrop for everything below the skyline.
+    g(C.backdrop, win.x0, win.y0, gw, gh);
+
+    // Sky, warming toward the horizon with the glow of the city.
+    const hz = win.y0 + Math.round(gh * 0.47);
+    for (let y = win.y0; y < hz; y++) {
+      const t = ((y - win.y0) / (hz - win.y0)) * (C.sky.length - 1);
+      const warm = Math.max(0, (y - win.y0) / (hz - win.y0) - 0.55) / 0.45;
+      for (let x = win.x0; x < win.x1; x++) {
+        const i = Math.max(0, Math.min(C.sky.length - 1, Math.floor(t + bayer(x, y))));
+        let c = C.sky[i];
+        if (warm * 0.6 > bayer(x + 1, y)) c = warm > 0.65 && bayer(x, y + 2) < warm - 0.4 ? C.glow2 : C.glow1;
+        g(c, x, y);
+      }
+    }
+    for (let i = 0; i < gw / 9; i++) {
+      g(rand() > 0.75 ? "#4A5560" : "#2C3540", win.x0 + Math.floor(rand() * gw), win.y0 + Math.floor(rand() * gh * 0.25));
+    }
+
+    // The sea, a thin dark band with light on it.
+    const seaH = Math.max(2, Math.round(gh * 0.06));
+    g(C.sea, win.x0, hz, gw, seaH);
+    g(C.seaLine, win.x0, hz, gw, 1);
+    for (let i = 0; i < gw / 3; i++) {
+      sparkles.push({ x: win.x0 + Math.floor(rand() * gw), y: hz + 1 + Math.floor(rand() * (seaH - 1)), c: rand() > 0.6 ? C.tealDim : C.amberDim, p: rand() * 10 });
+    }
+
+    // The hill, and the basilica floodlit on top of it.
+    const hx = win.x0 + Math.round(gw * (L.portrait ? 0.66 : 0.7));
+    const hw = Math.round(gw * 0.22);
+    const hTop = hz - Math.round(gh * 0.085);
+    for (let x = hx - hw; x <= hx + hw; x++) {
+      const k = (x - hx) / hw;
+      const y = Math.round(hTop + k * k * (hz - hTop + 2));
+      g(C.hill, x, y, 1, win.y1 - y);
+    }
+    const by = hTop;
+    // Houses scattered on the slope.
+    for (let i = 0; i < hw / 2; i++) {
+      const lx = hx - hw + 2 + Math.floor(rand() * (hw * 2 - 4));
+      const k = (lx - hx) / hw;
+      const ly = Math.round(hTop + k * k * (hz - hTop + 2)) + 2 + Math.floor(rand() * 4);
+      if (Math.abs(lx - hx) > 4 && ly < hz) lights.push({ x: lx, y: ly, h: 1, c: C.amberDim, on: rand() > 0.2 });
+    }
+    // Notre-Dame de la Garde: a small floodlit silhouette, the gilded statue on top.
+    g(C.basilica, hx - 4, by - 2, 9, 2);
+    g(C.basilicaLit, hx - 4, by - 2, 9, 1);
+    g(C.basilica, hx - 1, by - 6, 3, 4);
+    g(C.basilicaLit, hx - 1, by - 6, 1, 4);
+    g(C.gold, hx, by - 8, 1, 2);
+    viewGlows.push([hx, by - 3, 6, C.amber, 0.07]);
+
+    // Harbour cranes on the far left, with warning lights.
+    const crane = (cx, h, jib) => {
+      g(C.crane, cx, hz - h, 1, h + seaH);
+      g(C.crane, cx - 2, hz - h, jib, 1);
+      g(C.crane, cx + 1, hz - h + 1, 1, 1);
+      g(C.crane, cx - 1, hz - h - 2, 1, 2);
+      beacons.push({ x: cx - 1, y: hz - h - 3, c: C.amber, period: 2.6, phase: rand() * 2 });
+    };
+    crane(win.x0 + Math.round(gw * 0.07), Math.round(gh * 0.16), 9);
+    crane(win.x0 + Math.round(gw * 0.17), Math.round(gh * 0.12), 7);
+
+    // The middle city: stacked old buildings with windows and shutters.
+    const midBase = win.y1;
+    let x = win.x0 - 2;
+    while (x < win.x1) {
+      const bw = 5 + Math.floor(rand() * 9);
+      const top = hz + seaH - 1 + Math.floor(rand() * gh * 0.16) - (rand() > 0.85 ? Math.round(gh * 0.08) : 0);
+      g(C.city, x, top, bw, midBase - top);
+      g(C.cityEdge, x, top, bw, 1);
+      g(C.outline, x + bw - 1, top, 1, midBase - top);
+      if (rand() > 0.55) {
+        g(C.city, x + 1, top - 1, bw - 2, 1);
+        g(C.cityEdge, x + 1, top - 1, bw - 2, 1);
+      }
+      for (let wy = top + 2; wy < midBase - 1; wy += 3) {
+        for (let wx = x + 1; wx < x + bw - 1; wx += 2) {
+          if (rand() < 0.22 && inGlass(wx, wy)) {
+            const tone = rand();
+            lights.push({ x: wx, y: wy, h: 1, c: tone < 0.6 ? C.amberDim : tone < 0.88 ? C.tealDim : C.amber, on: rand() > 0.1 });
+          }
+        }
+      }
+      // Now and then a vertical neon blade on a façade.
+      if (rand() > 0.82 && bw > 6) {
+        const nx = x + bw - 2;
+        const ny = top + 2;
+        const len = 5 + Math.floor(rand() * 4);
+        const pix = [];
+        for (let i = 0; i < len; i++) if (i % 3 !== 2) pix.push([nx, ny + i]);
+        const c = rand() > 0.5 ? C.neonTeal : C.neonRose;
+        neons.push({ pix, c, flicker: rand() > 0.5, phase: rand() * 10 });
+        viewGlows.push([nx, ny + len / 2, 5, c, 0.1]);
+      }
+      x += bw;
+    }
+
+    // A drone, sometimes, crossing above the hill.
+    drone = { y: win.y0 + Math.round(gh * 0.16), t: rand() * 40 };
+
+    // Foreground: tiled roofs, chimneys, antennas, a sign.
+    const roofTop = win.y0 + Math.round(gh * 0.7);
+    const masts = [];
+    let rx = win.x0 - Math.floor(rand() * 8);
+    let signPlaced = false;
+    while (rx < win.x1) {
+      const w = 14 + Math.floor(rand() * 14);
+      const eave = roofTop + 3 + Math.floor(rand() * 6);
+      const rise = 3 + Math.floor(rand() * 3);
+      const ridge = eave - rise;
+      // Wall under the roof.
+      g(C.wallNear, rx, eave + 1, w, win.y1 - eave);
+      for (let wy = eave + 3; wy < win.y1 - 2; wy += 5) {
+        for (let wx = rx + 2; wx < rx + w - 3; wx += 5) {
+          const lit = rand() < 0.38;
+          g(C.outline, wx - 1, wy, 4, 3);
+          g(lit ? C.windowLit : C.windowDark, wx, wy, 2, 3);
+          g(C.shutter, wx - 1, wy, 1, 3);
+          g(C.shutter, wx + 2, wy, 1, 3);
+          if (lit) viewGlows.push([wx + 1, wy + 1, 3, C.amber, 0.08]);
+        }
+      }
+      // Canal tiles, row by row, ridge to eave.
+      for (let y = ridge; y <= eave; y++) {
+        const inset = eave - y;
+        const x0 = rx + inset;
+        const x1 = rx + w - inset;
+        for (let xx = x0; xx < x1; xx++) {
+          let c = (y - ridge) % 2 ? C.tile1 : C.tile2;
+          if ((xx + (y - ridge)) % 3 === 0) c = C.tileDark;
+          if (y === ridge) c = C.tileLight;
+          if (y === eave) c = C.tileDark;
+          g(c, xx, y);
+        }
+      }
+      g(C.outline, rx, eave + 1, w, 1);
+      // Chimney.
+      if (rand() > 0.35) {
+        const cx = rx + 4 + Math.floor(rand() * Math.max(1, w - 10));
+        g(C.chimney, cx, ridge - 4, 2, 5);
+        g(C.chimneyCap, cx - 1, ridge - 5, 4, 1);
+        masts.push([cx, ridge - 6]);
+      }
+      // TV antenna.
+      if (rand() > 0.45) {
+        const ax = rx + Math.floor(w * (0.55 + rand() * 0.3));
+        g(C.antenna, ax, ridge - 7, 1, 7);
+        g(C.antenna, ax - 2, ridge - 6, 5, 1);
+        g(C.antenna, ax - 1, ridge - 4, 3, 1);
+        masts.push([ax, ridge - 7]);
+        if (rand() > 0.6) beacons.push({ x: ax, y: ridge - 8, c: C.neonRose, period: 3.4, phase: rand() * 3 });
+      }
+      // Satellite dish.
+      if (rand() > 0.7) {
+        const dx = rx + 2 + Math.floor(rand() * 4);
+        g(C.antenna, dx, eave - 2, 2, 2);
+        g(C.frameLight, dx + 1, eave - 3, 1, 1);
+      }
+      // One neon sign on a gable wall.
+      if (!signPlaced && w > 18 && rx > win.x0 + gw * 0.3) {
+        signPlaced = true;
+        const sx = rx + Math.floor(w / 2) - 5;
+        const sy = eave + 2;
+        const pix = [];
+        for (let i = 0; i < 11; i++) pix.push([sx + i, sy], [sx + i, sy + 3]);
+        pix.push([sx, sy + 1], [sx, sy + 2], [sx + 10, sy + 1], [sx + 10, sy + 2]);
+        for (const i of [2, 3, 5, 7, 8]) pix.push([sx + i, sy + 1 + (i % 2)]);
+        neons.push({ pix, c: C.neonRose, flicker: true, phase: 1.3 });
+        viewGlows.push([sx + 5, sy + 2, 9, C.neonRose, 0.16]);
+      }
+      rx += w - 1 - Math.floor(rand() * 3);
+    }
+
+    // String lights hung between two masts.
+    masts.sort((a, b) => a[0] - b[0]);
+    for (let i = 0; i + 1 < masts.length; i += 2) {
+      const [ax, ay] = masts[i];
+      const [bx, byy] = masts[i + 1];
+      if (bx - ax < 8 || bx - ax > 40) continue;
+      for (let xx = ax + 1; xx < bx; xx++) {
+        const t = (xx - ax) / (bx - ax);
+        const yy = Math.round(ay + (byy - ay) * t + Math.sin(t * Math.PI) * 3);
+        g(C.cable, xx, yy);
+        if ((xx - ax) % 3 === 0 && inGlass(xx, yy + 1)) lights.push({ x: xx, y: yy + 1, h: 1, c: C.amber, on: true, steady: true });
+      }
+    }
   }
 
   function glow(img, cx, cy, r, color, strength, cutoff) {
@@ -300,6 +485,24 @@ export function createScene(canvas, { lamp = true } = {}) {
         const k = Math.pow(1 - dist, 1.6);
         if (k * cutoff < bayer(x, y) * 0.9) continue;
         const a = strength * (0.55 + 0.45 * k);
+        const i = (y * W + x) * 4;
+        d[i] += (cr - d[i]) * a;
+        d[i + 1] += (cg - d[i + 1]) * a;
+        d[i + 2] += (cb - d[i + 2]) * a;
+      }
+    }
+  }
+
+  /** Like glow(), but clipped to the window glass. */
+  function glowIn(img, cx, cy, r, color, strength) {
+    const { win } = L;
+    const [cr, cg, cb] = hex(color);
+    const d = img.data;
+    for (let y = Math.max(win.y0, Math.floor(cy - r)); y < Math.min(win.y1, Math.ceil(cy + r)); y++) {
+      for (let x = Math.max(win.x0, Math.floor(cx - r)); x < Math.min(win.x1, Math.ceil(cx + r)); x++) {
+        const k = 1 - Math.hypot(x - cx, y - cy) / r;
+        if (k <= 0 || k < bayer(x, y) * 0.8) continue;
+        const a = strength * (0.5 + 0.5 * k);
         const i = (y * W + x) * 4;
         d[i] += (cr - d[i]) * a;
         d[i + 1] += (cg - d[i + 1]) * a;
@@ -442,7 +645,7 @@ export function createScene(canvas, { lamp = true } = {}) {
     const { win } = L;
     const area = (win.x1 - win.x0) * (win.y1 - win.y0);
     const rand = rng(Date.now() & 0xffff);
-    drops = Array.from({ length: Math.round(area / 150) }, () => ({
+    drops = Array.from({ length: Math.round(area / 220) }, () => ({
       x: win.x0 + rand() * (win.x1 - win.x0 + 10),
       y: win.y0 + rand() * (win.y1 - win.y0),
       len: 2 + Math.floor(rand() * 3),
@@ -462,10 +665,46 @@ export function createScene(canvas, { lamp = true } = {}) {
       ctx.fillStyle = l.c;
       ctx.fillRect(l.x, l.y, 1, 1);
     }
-    // Aircraft-warning light on the tallest roof.
-    if (beacon && (t % 2.4 < 1.2 || !ambient)) {
-      ctx.fillStyle = C.amber;
-      ctx.fillRect(beacon.x, beacon.y, 1, 1);
+    // Warning lights on cranes and antennas.
+    for (const b of beacons) {
+      if (!ambient || (t + b.phase) % b.period < b.period * 0.45) {
+        ctx.fillStyle = b.c;
+        ctx.fillRect(b.x, b.y, 1, 1);
+      }
+    }
+
+    // Neon signs. Some of them hesitate.
+    for (const n of neons) {
+      const off = ambient && n.flicker && Math.sin(t * 7 + n.phase) > 0.93 && Math.sin(t * 1.3 + n.phase) > 0.2;
+      if (off) continue;
+      ctx.fillStyle = n.c;
+      for (const [x, y] of n.pix) if (x >= win.x0 && x < win.x1 && y >= win.y0 && y < win.y1) ctx.fillRect(x, y, 1, 1);
+    }
+
+    // Light trembling on the sea.
+    for (const s of sparkles) {
+      if (!ambient || Math.sin(t * 2.1 + s.p * 3) > 0.15) {
+        ctx.fillStyle = s.c;
+        ctx.fillRect(s.x, s.y, 1, 1);
+      }
+    }
+
+    // A delivery drone drifting across, now and then.
+    if (drone && ambient) {
+      const cycle = 46;
+      const k = ((t + drone.t) % cycle) / 26;
+      if (k <= 1) {
+        const dx = Math.round(win.x1 + 3 - k * (win.x1 - win.x0 + 6));
+        const dy = drone.y + Math.round(Math.sin(t * 1.7));
+        if (dx >= win.x0 && dx < win.x1 - 1) {
+          ctx.fillStyle = C.outline;
+          ctx.fillRect(dx - 1, dy, 3, 1);
+          if (t % 1 < 0.5) {
+            ctx.fillStyle = C.neonTeal;
+            ctx.fillRect(dx, dy + 1, 1, 1);
+          }
+        }
+      }
     }
 
     // Rain on the glass.
@@ -506,7 +745,7 @@ export function createScene(canvas, { lamp = true } = {}) {
     }
     if (Math.random() < 0.004 * dt * 12 && lights.length) {
       const l = lights[Math.floor(Math.random() * lights.length)];
-      l.on = !l.on;
+      if (!l.steady) l.on = !l.on;
     }
     if (Math.random() < 0.05 * dt * 12 && steam.length < 4) {
       steam.push({ x: L.mugX + 1 + Math.random() * 2, y: L.deskY - 7, life: 1 });

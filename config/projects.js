@@ -32,8 +32,8 @@ export const PROJECTS = [
       "Réflexions / 考察",
       "Divers / その他",
     ],
-    url: "", // ← paste the public BAM address here, then set status to "online"
-    status: "link-pending",
+    url: "https://tiephen.neocities.org/BAM/",
+    status: "online",
     icon: "bam",
     accent: "#C49B70",
     splash: "editorial",
@@ -52,8 +52,8 @@ export const PROJECTS = [
       "Educational resources",
       "Collaborative workshops",
     ],
-    url: "", // ← paste the public TRAD/LAB address here, then set status to "online"
-    status: "link-pending",
+    url: "https://trad-lab.pages.dev/",
+    status: "online",
     icon: "tradlab",
     accent: "#78949A",
     splash: "lab",

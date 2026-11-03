@@ -39,7 +39,7 @@ Statuses:
 | `under-development` | "Under development", no button. |
 | `coming-soon` | "Coming soon", no button. |
 
-**To publish BAM or TRAD/LAB:** paste the address into `url` and change `status` to `"online"`. The desktop icon, start menu, file explorer and preview window all update from that one entry.
+**To publish a project:** paste its address into `url` and change `status` to `"online"`. The desktop icon, start menu, file explorer and preview window all update from that one entry.
 
 **To add a new application:** add an entry. It appears on the desktop, in the start menu and in `/APPLICATIONS` automatically. Reuse an existing `icon` and `splash`, or draw a new 16×16 icon in `src/utils/icons.js` (one character per pixel, colours in `PALETTE`).
 
@@ -81,7 +81,7 @@ config/
 src/
   main.js                  boot: wires everything together
   components/
-    scene.js               the night room, drawn on a low-res canvas
+    scene.js               the night room over the rooftops of Marseille, low-res canvas
     windowManager.js       open / focus / move / minimise / close, saved positions
     apps.js                window contents: projects, About, Ko-fi, Settings, Files, system.log
     desktop.js             desktop icons and the boot log
@@ -112,4 +112,4 @@ scripts/check.mjs          pre-deploy checks
 
 ## Credits and licences
 
-Code, icons and the night-room illustration: © Tiéphen Chauvin. Fonts from Google Fonts under the SIL Open Font License 1.1: Pixelify Sans, IBM Plex Sans JP, IBM Plex Mono.
+Code, icons and the night-room illustration (a bedroom over the tiled roofs of Marseille, Notre-Dame de la Garde on its hill): © Tiéphen Chauvin. Fonts from Google Fonts under the SIL Open Font License 1.1: Pixelify Sans, IBM Plex Sans JP, IBM Plex Mono.
