@@ -114,7 +114,7 @@ export function runBootLog(el, { lampOn, reduced }) {
     ["TITI OS 1.0.0 · digital environment 01", ""],
     ["mounting /applications ........ ", "ok"],
     ["desk lamp ..................... ", lampOn ? "on" : "off"],
-    ["weather ....................... ", "rain"],
+    ["sky ........................... ", "violet"],
     [isCompact() ? "› tap an icon to open it" : "› double-click an icon to open it", "", "hint"],
   ];
   el.replaceChildren();

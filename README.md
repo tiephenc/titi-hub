@@ -81,7 +81,7 @@ config/
 src/
   main.js                  boot: wires everything together
   components/
-    scene.js               the night room over the rooftops of Marseille, low-res canvas
+    scene.js               the room and Marseille at dusk, painted on a low-res canvas
     windowManager.js       open / focus / move / minimise / close, saved positions
     apps.js                window contents: projects, About, Ko-fi, Settings, Files, system.log
     desktop.js             desktop icons and the boot log
@@ -112,4 +112,4 @@ scripts/check.mjs          pre-deploy checks
 
 ## Credits and licences
 
-Code, icons and the night-room illustration (a bedroom over the tiled roofs of Marseille, Notre-Dame de la Garde on its hill): © Tiéphen Chauvin. Fonts from Google Fonts under the SIL Open Font License 1.1: Pixelify Sans, IBM Plex Sans JP, IBM Plex Mono.
+Code, icons and the illustration (a room on the rooftops of Noailles at dusk, looking west over the Vieux-Port, Notre-Dame de la Garde, the Frioul, the MuCEM, La Major and the CMA CGM tower): © Tiéphen Chauvin. Fonts from Google Fonts under the SIL Open Font License 1.1: Pixelify Sans, IBM Plex Sans JP, IBM Plex Mono.

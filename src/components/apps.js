@@ -365,7 +365,7 @@ export function createApps({ wm, prefs }) {
             "ul",
             { class: "settings-list" },
             toggle("sound", "Sound", "Small interface sounds. Off until you turn it on."),
-            toggle("ambient", "Ambient animation", "Rain on the window, city lights, steam."),
+            toggle("ambient", "Ambient animation", "Gulls, neon, city lights and the cat."),
             toggle("reducedMotion", "Reduce motion", motionHelp, {
               get: () => prefs.reduced(),
               set: (v) => prefs.set({ reducedMotion: v }),
@@ -556,7 +556,7 @@ export function createApps({ wm, prefs }) {
             line("viewport", `${window.innerWidth}×${window.innerHeight}`),
             line("windows", `${wm.list().length} open`),
             line("applications", Object.entries(counts).map(([s, n]) => `${n} ${STATUS_LABELS[s].toLowerCase()}`).join(", ")),
-            line("weather", p.ambient && !prefs.reduced() ? "rain, light" : "rain, paused"),
+            line("outside", p.ambient && !prefs.reduced() ? "marseille, dusk" : "marseille, dusk (still)"),
             line("lamp", p.lamp ? "on" : "off", p.lamp ? "warm" : "v"),
             line("sound", p.sound ? "on" : "off"),
             h("p", { class: "k" }, "› the lamp switch is on its shade.")
