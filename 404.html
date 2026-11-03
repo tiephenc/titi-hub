@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>File not found — TITI OS</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/titi-hub/assets/favicon.svg" type="image/svg+xml">
+  <style>
+    html, body { margin: 0; height: 100%; }
+    body {
+      display: grid; place-items: center; padding: 1.5rem; box-sizing: border-box;
+      background: #171A20; color: #E1E4E5;
+      font: 15px/1.6 "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    }
+    main { max-width: 32rem; }
+    p { margin: 0 0 0.5rem; }
+    .dim { color: #A8B4B9; }
+    .warm { color: #C49B70; }
+    a { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; color: #171A20; background: #C49B70; text-decoration: none; }
+    a:focus-visible { outline: 2px dashed #E1E4E5; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="warm">C:\&gt; open <span id="path">this file</span></p>
+    <p>File not found.</p>
+    <p class="dim">There is nothing at this address. Everything on this desktop lives one level up.</p>
+    <a href="/titi-hub/">Return to the desktop</a>
+  </main>
+  <script>
+    document.getElementById("path").textContent = location.pathname.replace(/^\/titi-hub/, "") || "/";
+  </script>
+</body>
+</html>

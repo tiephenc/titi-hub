@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>TITI'S HUB.exe — TITI OS</title>
+  <meta name="description" content="TITI OS, digital environment 01: a small pixel-art desktop that opens every project by Titi — BAM, TRAD/LAB, AGORA, KOTONOHA and TITI'S ROOM.">
+  <meta name="author" content="Tiéphen Chauvin">
+  <meta name="theme-color" content="#111318">
+  <meta name="color-scheme" content="dark">
+  <link rel="canonical" href="https://tiephenc.github.io/titi-hub/">
+
+  <!-- Open Graph / social cards -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="TITI'S HUB.exe">
+  <meta property="og:title" content="TITI'S HUB.exe — TITI OS">
+  <meta property="og:description" content="A quiet desktop at night, and every project by Titi on it.">
+  <meta property="og:url" content="https://tiephenc.github.io/titi-hub/">
+  <meta property="og:image" content="https://tiephenc.github.io/titi-hub/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="A pixel-art desk at night: a monitor, a lamp, and a rainy city through the window.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="TITI'S HUB.exe — TITI OS">
+  <meta name="twitter:description" content="A quiet desktop at night, and every project by Titi on it.">
+  <meta name="twitter:image" content="https://tiephenc.github.io/titi-hub/assets/og.png">
+
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+JP:wght@400;500&family=Pixelify+Sans:wght@400&display=swap">
+
+  <link rel="stylesheet" href="src/styles/base.css">
+  <link rel="stylesheet" href="src/styles/desktop.css">
+  <link rel="stylesheet" href="src/styles/windows.css">
+  <link rel="stylesheet" href="src/styles/apps.css">
+  <link rel="modulepreload" href="src/main.js">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "TITI'S HUB.exe",
+    "url": "https://tiephenc.github.io/titi-hub/",
+    "author": { "@type": "Person", "name": "Tiéphen Chauvin", "url": "https://github.com/tiephenc" }
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#desktop-icons">Skip to the applications</a>
+
+  <canvas id="scene" aria-hidden="true"></canvas>
+
+  <main id="desktop" aria-label="TITI OS desktop">
+    <h1 class="visually-hidden">TITI'S HUB.exe — the desktop that opens every project by Titi</h1>
+    <p id="icon-hint" class="visually-hidden">Press Enter to open.</p>
+    <ul id="desktop-icons" class="icons" aria-label="Applications and shortcuts"></ul>
+    <div id="boot-log" class="boot-log" aria-hidden="true"></div>
+    <div id="win-layer" class="win-layer"></div>
+  </main>
+
+  <nav id="taskbar" class="taskbar" aria-label="Taskbar">
+    <button class="tb-btn tb-start" type="button" aria-label="Start menu"><span class="tb-start__name">TITI OS</span></button>
+    <button class="tb-btn tb-switch" type="button" aria-label="Open windows: 0">
+      <svg class="glyph" viewBox="0 0 16 16" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path fill="currentColor" d="M4 2h10v8h-2V4H4zM2 6h8v8H2zm2 2v4h4V8z"/></svg>
+      <span class="tb-switch__count">0</span>
+    </button>
+    <div class="tb-tasks" aria-label="Open windows" role="group"></div>
+    <div class="tb-tray">
+      <span class="tray-status" role="status"><span class="status-led" aria-hidden="true"></span><span class="tray-status__label">online</span></span>
+      <button class="tray-btn tray-sound" type="button" aria-label="Interface sound" aria-pressed="false"></button>
+      <button class="tray-btn tray-kofi" type="button" aria-label="Support my work on Ko-fi" title="Support my work"></button>
+      <button class="tray-btn tray-clock mono" type="button"><time>--:--</time></button>
+    </div>
+  </nav>
+
+  <div id="start-menu" class="popover" hidden></div>
+  <div id="switcher" class="popover" hidden></div>
+  <div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
+
+  <noscript>
+    <div class="noscript">
+      <p>TITI OS needs JavaScript to boot.<br>Turn it on and reload to open the desktop.</p>
+    </div>
+  </noscript>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

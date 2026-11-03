@@ -1,0 +1,205 @@
+/* ==========================================================================
+   TITI OS — window chrome
+   ========================================================================== */
+
+.win-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.win {
+  --accent: var(--teal);
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--w, 32rem), calc(100% - 1rem));
+  max-height: calc(100% - 1rem);
+  background: var(--panel);
+  border: 2px solid var(--line);
+  box-shadow: 6px 6px 0 var(--shadow);
+  pointer-events: auto;
+}
+
+.win[hidden] {
+  display: none;
+}
+
+.win.is-active {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+.win-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
+  height: 2.25rem;
+  padding: 0 0.25rem 0 0.625rem;
+  background: var(--panel-raised);
+  border-bottom: 2px solid var(--line-soft);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.win-bar:active {
+  cursor: grabbing;
+}
+
+/* A thin accent line under the bar of the active window. */
+.win.is-active .win-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent) 0 3.5rem, transparent 3.5rem);
+}
+
+.win-bar:focus-visible {
+  outline-offset: -4px;
+}
+
+.win-bar__icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: none;
+}
+
+.win-bar__title {
+  flex: none;
+  font-family: var(--font-pixel);
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+}
+
+.win.is-active .win-bar__title {
+  color: var(--ink);
+}
+
+.win-bar__path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--ink-faint);
+}
+
+.win-ctl {
+  display: flex;
+  gap: 0.25rem;
+  flex: none;
+}
+
+.win-btn {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.win-btn svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.win-btn:hover {
+  color: var(--ink);
+  background: #2F3741;
+}
+
+.win-btn[data-act="close"]:hover {
+  color: var(--night);
+  background: var(--amber);
+}
+
+.win-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.win-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.win-body::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border: 2px solid var(--panel);
+}
+
+/* Opening and closing: the window unrolls in four steps, like a CRT. */
+.win.is-entering {
+  animation: win-in 180ms var(--ease-step);
+}
+
+.win.is-leaving {
+  animation: win-out 140ms var(--ease-step) forwards;
+}
+
+@keyframes win-in {
+  from { clip-path: inset(48% 0 48% 0); opacity: 0.4; }
+  to { clip-path: inset(0 0 0 0); opacity: 1; }
+}
+
+@keyframes win-out {
+  from { clip-path: inset(0 0 0 0); opacity: 1; }
+  to { clip-path: inset(49% 4% 49% 4%); opacity: 0; }
+}
+
+.win.is-dragging {
+  box-shadow: 10px 10px 0 rgb(10 12 15 / 0.85);
+}
+
+.win.is-dragging .win-body {
+  pointer-events: none;
+}
+
+/* Compact layout: every window becomes a full screen sheet. */
+body.is-compact .win {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border: 0;
+  box-shadow: none;
+}
+
+body.is-compact .win-bar {
+  height: 3rem;
+  cursor: default;
+  padding-left: 0.875rem;
+}
+
+body.is-compact .win-btn {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+body.is-compact .win-btn svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+body.is-compact .win.is-entering {
+  animation-name: sheet-in;
+}
+
+@keyframes sheet-in {
+  from { transform: translateY(2.5rem); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
