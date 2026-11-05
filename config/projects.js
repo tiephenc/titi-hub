@@ -117,10 +117,8 @@ export const PROJECTS = [
       "Focus timer",
       "Works offline",
     ],
-    // Not reachable yet (GitHub Pages returns 404). Once it is live, paste
-    // https://tiephenc.github.io/MALSSI/ here and set status to "online".
-    url: "",
-    status: "link-pending",
+    url: "https://tiephenc.github.io/MALSSI/",
+    status: "online",
     icon: "malssi",
     accent: "#2F5D8A",
     splash: "magpie",

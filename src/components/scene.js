@@ -143,7 +143,7 @@ const C = {
   fan: "#FF4FA0",
   fanDim: "#8A2A60",
   catBody: "#0E0A16",
-  catRim: "#7A4A8A",
+  catRim: "#B07AC8",
   headphones: "#2A2838",
   led: "#FF4F7A",
   steam: "#8A84A8",
@@ -374,17 +374,33 @@ const MAJOR = [
 
 // The cat on the sill, from behind, backlit.
 const CAT = [
-  ".r....r...",
-  ".kr..rk...",
-  ".kkkkkk...",
-  "rkkkkkkr..",
-  ".kkkkkk...",
-  "..kkkk....",
-  ".rkkkkr...",
-  "rkkkkkkr..",
-  "kkkkkkkk..",
-  "kkkkkkkkr.",
-  "kkkkkkkkk.",
+  "...rr.............rr....",
+  "...rr.............rr....",
+  "...rpr...........rpr....",
+  "...rpprr.......rrppr....",
+  "...rkkkr.......rkkkr....",
+  "...rkkkkrrrrrrrkkkkr....",
+  "..rkkkkkkkkkkkkkkkkkr...",
+  "..rkkkkkkkkkkkkkkkkkr...",
+  "..rkkkkkkkkkkkkkkkkkr...",
+  "..rkkkkkkkkkkkkkkkkkr...",
+  "..rkkkkkkkkkkkkkkkkkr...",
+  "...rkkkkkkkkkkkkkkkr....",
+  ".....rkkkkkkkkkkkr......",
+  ".....rkkkkkkkkkkkr......",
+  ".....rkkkkkkkkkkkr......",
+  "...rrkkkkkkkkkkkkkrr....",
+  "...rkkkkkkkkkkkkkkkr....",
+  "..rkkkkkkkkkkkkkkkkkr...",
+  "..rkkkkkkkkkkkkkkkkkr...",
+  "..rkkkkkkkkkkkkkkkkkr...",
+  "rrkkkkkkkkkkkkkkkkkkkrr.",
+  "rkkkkkkkkkkkkkkkkkkkkkr.",
+  "rkkkkkkkkkkkkkkkkkkkkkr.",
+  "rkkkkkkkkkkkkkkkkkkkkkkr",
+  "rkkkkkkkkkkkkkkkkkkkkkkr",
+  "kkkkkkkkkkkkkkkkkkkkkkkk",
+  "..kkkkkkkkkkkkkkkkkkkkk.",
 ];
 
 // 言 — "word", in neon.
@@ -442,6 +458,18 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
   let musicOn = false;
   let coffee = 3;
   let fanIdx = 0;
+  let ceilingFan = 1;
+  let fanAngle = 0;
+  let lavaIdx = 0;
+  let neonIdx = 0;
+  let strumAt = -99;
+  const LAVA = [
+    { liquid: "#3A1640", blob: "#FF4FA0", hi: "#FFB0D8", glow: "#FF4FA0" },
+    { liquid: "#0E3440", blob: "#4FEAF2", hi: "#C8FAFF", glow: "#4FEAF2" },
+    { liquid: "#1A3A1E", blob: "#8AF06A", hi: "#DAFFC8", glow: "#8AF06A" },
+    { liquid: "#3A2410", blob: "#FFB070", hi: "#FFE6C0", glow: "#FFB070" },
+  ];
+  const NEON = ["#4FEAF2", "#FF4FA0", "#B27CFF"];
   let catPokeAt = -99;
   let lastT = 0;
   let drops = [];
@@ -492,7 +520,7 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
           poster: null,
           kanji: { x: r(W * 0.12), y: r(H * 0.335) },
           plantX: null,
-          catX: r(W * 0.74),
+          catX: r(W * 0.62),
         }
       : {
           portrait,
@@ -510,7 +538,7 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
           poster: { x: r(W * 0.2), y: r(H * 0.41) },
           kanji: { x: r(W * 0.285), y: r(H * 0.44) },
           plantX: W - 8,
-          catX: r(W * 0.82),
+          catX: r(W * 0.635),
         };
   }
 
@@ -985,6 +1013,9 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
       for (let i = 0; i < 12; i++) P.px(px + 5 + (i % 3 === 0 ? 1 : 0), y + 1 + i, i % 2 ? C.leaf : C.leafLit);
       for (let i = 0; i < 7; i++) P.px(px - 1, y + 2 + i, i % 2 ? C.leafLit : C.leaf);
       hit("shelfbooks", x0, y - 15, bx + 8, y + 1);
+      // Cyan LED strip under the shelf.
+      P.hline(x0 + 1, x1 - 2, y + 3, "#4FEAF2");
+      P.glow((x0 + x1) / 2, y + 6, (x1 - x0) * 0.6, "#4FEAF2", 0.1, { ry: 8 });
       hit("clock", clx, y - 11, clx + 20, y);
       hit("plant", px - 2, y - 10, px + 8, y + 14);
     }
@@ -1014,6 +1045,57 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
       hit("kanji", x - 2, y - 2, x + 11, y + 13);
     }
     paintHangingPlant(P);
+    paintCeiling(P);
+    paintCyberPoster(P);
+  }
+
+  /** A neon tube on the ceiling and a ceiling fan, as in a cyberpunk loft. */
+  function paintCeiling(P) {
+    if (L.portrait) return;
+    const { win } = L;
+    const y = Math.max(3, Math.round(win.y0 * 0.35));
+    const x0 = Math.round(win.x0 + (win.x1 - win.x0) * 0.18);
+    const x1 = Math.round(win.x0 + (win.x1 - win.x0) * 0.62);
+    P.rect(x0 - 2, y - 2, x1 - x0 + 4, 5, C.outline);
+    P.rect(x0 - 1, y - 1, 1, 3, C.metal);
+    P.rect(x1, y - 1, 1, 3, C.metal);
+    dyn.tube = { x0, x1, y };
+    hit("neon", x0 - 2, y - 3, x1 + 3, y + 4);
+    // Fan: a rod from the ceiling, a motor, a small light below.
+    const fx = Math.round(W * 0.25);
+    const fy = Math.round(H * 0.085);
+    P.vline(fx, 0, fy - 3, C.metal);
+    P.vline(fx - 1, 0, fy - 3, C.outline);
+    P.rect(fx - 4, fy - 3, 9, 3, C.lampBody);
+    P.hline(fx - 4, fx + 4, fy - 3, C.metalLit);
+    P.rect(fx - 2, fy + 1, 5, 2, "#E8D8B0");
+    P.glow(fx, fy + 3, 22, "#FFD58A", 0.1, { ry: 12 });
+    dyn.fan = { x: fx, y: fy, r: 17 };
+    hit("fan", fx - 19, fy - 6, fx + 20, fy + 6);
+  }
+
+  /** A night-city poster with a figure and vertical text. */
+  function paintCyberPoster(P) {
+    if (L.portrait) return;
+    const x = Math.round(L.win.x0 - 4 - 22);
+    const y = Math.round(H * 0.1);
+    const w = 18;
+    const h = 30;
+    if (x < Math.round(W * 0.27)) return;
+    P.rect(x - 1, y - 1, w + 2, h + 2, C.outline);
+    P.vgrad(x, y, w, h, ["#14183A", "#1E1A48", "#3A2060"]);
+    // A figure looking out over the city.
+    P.rect(x + 7, y + 9, 4, 3, "#0A0912");
+    P.rect(x + 6, y + 12, 6, 9, "#0A0912");
+    P.rect(x + 7, y + 21, 2, 5, "#0A0912");
+    P.rect(x + 10, y + 21, 2, 5, "#0A0912");
+    P.vline(x + 6, y + 12, y + 20, "#4FEAF2");
+    for (let i = 0; i < w; i += 3) P.vline(x + i, y + h - 5 - ((i * 5) % 4), y + h - 1, "#2A2458");
+    // Vertical text, a red sun.
+    for (let j = 0; j < 6; j++) P.hline(x + 2, x + 3, y + 3 + j * 3, j % 2 ? "#FF4FA0" : "#C9C0F0");
+    P.rect(x + 12, y + 3, 4, 4, "#FF3B4E");
+    P.glow(x + w / 2, y + h / 2, 16, "#4FEAF2", 0.08);
+    hit("cyberposter", x - 1, y - 1, x + w + 1, y + h + 1);
   }
 
   function paintHangingPlant(P) {
@@ -1088,9 +1170,10 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
     P.hline(win.x0 - 7, win.x1 + 6, win.y1 + 3, C.sillLit);
     P.rect(win.x0 - 7, win.y1 + 7, w + 14, 1, C.outline);
     if (L.catX) {
-      P.spr(CAT, { k: C.catBody, r: C.catRim }, L.catX, win.y1 + 3 - CAT.length);
-      dyn.cat = { x: L.catX + 8, y: win.y1 + 2, hx: L.catX + 3, hy: win.y1 + 3 - CAT.length };
-      hit("cat", L.catX - 1, win.y1 - 9, L.catX + 12, win.y1 + 4);
+      P.spr(CAT, { k: C.catBody, r: C.catRim, p: "#6A3A60" }, L.catX, win.y1 + 3 - CAT.length);
+      const top = win.y1 + 3 - CAT.length;
+      dyn.cat = { x: L.catX + 23, y: win.y1 + 1, hx: L.catX + 10, hy: top, ears: [[L.catX + 3, top + 1], [L.catX + 19, top + 1]] };
+      hit("cat", L.catX - 1, top - 2, L.catX + 32, win.y1 + 4);
     }
     // Plants on the sill.
     const sy = win.y1 + 3;
@@ -1161,6 +1244,8 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
     if (L.pcX) paintPC(P);
     if (L.plantX) paintFloorPlant(P);
     paintChair(P);
+    paintGuitar(P);
+    paintLavaLamp(P);
   }
 
   /** A record player — on a low cabinet of records, or on the desk on phones. */
@@ -1242,6 +1327,57 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
     P.vline(x + 5, y - 11, y - 8, "#4A9A6E");
     [[2, -12], [1, -9], [3, -7], [2, -6]].forEach(([dx, dy]) => P.px(x + dx, y + dy, "#B9E6C8"));
     hit("plant", x - 2, y - 14, x + 7, y);
+  }
+
+  /** An acoustic guitar on a stand, next to the record cabinet. */
+  function paintGuitar(P) {
+    if (L.portrait || !L.turntable) return;
+    const gx = L.turntable.x - 9;
+    const by = Math.round(H * 0.94);
+    const lean = 0.14;
+    const at = (x, y) => Math.round(x + (by - y) * lean);
+    // Stand.
+    P.line(at(gx, by + 2) - 6, H, at(gx, by - 4), by - 4, C.metal);
+    P.line(at(gx, by + 2) + 6, H, at(gx, by - 4), by - 4, C.metal);
+    // Body: two bouts.
+    const bouts = [[by - 8, 9, 8], [by - 21, 7, 6]];
+    for (const [cy, rx, ry] of bouts) {
+      for (let y = cy - ry; y <= cy + ry; y++) {
+        for (let x = -rx; x <= rx; x++) {
+          const d = (x * x) / (rx * rx) + ((y - cy) * (y - cy)) / (ry * ry);
+          if (d > 1) continue;
+          const c = d > 0.82 ? "#3A2014" : x < -rx * 0.35 ? "#E2AE72" : "#B87A42";
+          P.px(at(gx + x, y), y, c);
+        }
+      }
+    }
+    // Sound hole, bridge, neck, headstock, strings.
+    for (let y = by - 16; y <= by - 12; y++) for (let x = -2; x <= 2; x++) if (x * x + (y - by + 14) * (y - by + 14) <= 5) P.px(at(gx + x, y), y, "#1A0E08");
+    P.hline(at(gx - 3, by - 5), at(gx + 3, by - 5), by - 5, "#2A160C");
+    for (let y = by - 52; y < by - 26; y++) {
+      P.px(at(gx - 1, y), y, "#4A2E22");
+      P.px(at(gx, y), y, "#5E3A2A");
+      P.px(at(gx + 1, y), y, "#4A2E22");
+      if (y % 4 === 0) P.px(at(gx, y), y, "#C9C0D8");
+    }
+    for (let y = by - 59; y < by - 52; y++) for (let x = -2; x <= 2; x++) P.px(at(gx + x, y), y, x === -2 || x === 2 ? "#2A160C" : "#3A2418");
+    P.px(at(gx - 3, by - 57), by - 57, "#C9C0D8");
+    P.px(at(gx + 3, by - 55), by - 55, "#C9C0D8");
+    dyn.guitar = { gx, by, lean, top: by - 52, bottom: by - 5 };
+    hit("guitar", at(gx - 9, by - 30), by - 60, at(gx + 10, by), by + 1);
+  }
+
+  /** A lava lamp on the desk: the blobs are animated in frame(). */
+  function paintLavaLamp(P) {
+    if (L.portrait || !L.pcX) return;
+    const x = Math.round((L.lampX + 6 + L.pcX) / 2);
+    const d = L.deskY + 2;
+    // Base and cap.
+    P.poly([[x - 4, d], [x + 5, d], [x + 3, d - 5], [x - 2, d - 5]], "#8A8AA0");
+    P.hline(x - 3, x + 4, d - 5, "#C9C9D8");
+    P.rect(x - 1, d - 25, 3, 2, "#8A8AA0");
+    dyn.lava = { x, top: d - 23, bottom: d - 6 };
+    hit("lava", x - 5, d - 27, x + 6, d + 1);
   }
 
   /** An empty desk chair, backlit by the window. */
@@ -1666,25 +1802,69 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
     // The cat: tail (faster with music), and a heart when petted.
     if (dyn.cat) {
       const speed = musicOn ? 2.6 : 0.9;
-      const up = live && Math.sin(t * speed) > 0.55;
-      const { x, y, hx, hy } = dyn.cat;
+      const lift = live ? Math.max(0, Math.sin(t * speed)) : 0;
+      const { x, y, hx, hy, ears } = dyn.cat;
+      // The tail lies along the sill, then curls up and sways.
       ctx.fillStyle = C.catBody;
-      ctx.fillRect(x + 1, y, 3, 1);
-      ctx.fillRect(x + 4, up ? y - 2 : y, 1, up ? 3 : 1);
-      ctx.fillRect(x + 5, up ? y - 3 : y, 1, 1);
+      ctx.fillRect(x, y - 1, 6, 3);
+      const curl = Math.round(lift * 9);
+      for (let i = 0; i <= curl; i++) ctx.fillRect(x + 6 + Math.round(Math.sin(i * 0.45) * 1.5), y - i, 2, 1);
+      ctx.fillStyle = C.catRim;
+      ctx.fillRect(x, y - 1, 6, 1);
+      ctx.fillRect(x + 6 + Math.round(Math.sin(curl * 0.45) * 1.5), y - curl, 2, 1);
       const since = now / 1000 - catPokeAt;
+      // Ears twitch now and then, and when petted.
+      const twitch = (since >= 0 && since < 0.5 && Math.floor(since * 10) % 2 === 0) || (live && t % 9 < 0.25);
+      if (twitch) {
+        ctx.fillStyle = "#3A2A55";
+        for (const [ex, ey] of ears) ctx.fillRect(ex, ey, 1, 2);
+      }
       if (since >= 0 && since < 1.8) {
-        if (since < 0.5 && Math.floor(since * 10) % 2 === 0) {
-          ctx.fillStyle = "#3A2A55";
-          ctx.fillRect(hx - 2, hy, 1, 1);
-          ctx.fillRect(hx + 3, hy, 1, 1);
-        }
         const k = since / 1.8;
         const heart = [".#.#.", "#####", ".###.", "..#.."];
         ctx.globalAlpha = 1 - k * 0.8;
         ctx.fillStyle = C.neonPink;
-        heart.forEach((row, j) => [...row].forEach((ch, i) => ch === "#" && ctx.fillRect(hx - 1 + i, hy - 7 - Math.round(k * 8) + j, 1, 1)));
+        heart.forEach((row, j) => [...row].forEach((ch, i) => ch === "#" && ctx.fillRect(hx - 2 + i, hy - 7 - Math.round(k * 10) + j, 1, 1)));
         ctx.globalAlpha = 1;
+      }
+    }
+    // The ceiling fan turns (speed set by clicking it).
+    if (dyn.fan) {
+      const { x, y, r } = dyn.fan;
+      if (live) fanAngle += [0, 2.2, 6][ceilingFan] * dt;
+      const blades = [];
+      for (let i = 0; i < 4; i++) {
+        const a = fanAngle + (i * Math.PI) / 2;
+        blades.push({ a, depth: Math.sin(a) });
+      }
+      blades.sort((p, q) => p.depth - q.depth);
+      for (const b of blades) {
+        const tx = x + Math.cos(b.a) * r;
+        const ty = y - 1 + Math.sin(b.a) * r * 0.22;
+        const n = Math.ceil(r);
+        for (let k = 3; k <= n; k++) {
+          const px = Math.round(x + ((tx - x) * k) / n);
+          const py = Math.round(y - 1 + ((ty - y + 1) * k) / n);
+          ctx.fillStyle = b.depth > 0 ? "#6A5A84" : "#3A3050";
+          ctx.fillRect(px, py, 1, 2);
+          if (k > n * 0.45) {
+            ctx.fillStyle = b.depth > 0 ? "#8A7AA8" : "#4A3D66";
+            ctx.fillRect(px, py - 1, 1, 1);
+          }
+        }
+      }
+    }
+    // The guitar's strings shiver after a strum.
+    if (dyn.guitar) {
+      const since = now / 1000 - strumAt;
+      if (since >= 0 && since < 1.2) {
+        const { gx, by, lean, top, bottom } = dyn.guitar;
+        const amp = Math.max(0, 1 - since / 1.2);
+        ctx.fillStyle = "#F0E8FF";
+        for (let y = top; y < bottom; y += 2) {
+          const off = Math.round(Math.sin(y * 1.3 + since * 60) * amp);
+          ctx.fillRect(Math.round(gx + off + (by - y) * lean), y, 1, 1);
+        }
       }
     }
     // Water drops on the plants.
@@ -1707,6 +1887,45 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
       ctx.fillRect(0, 0, W, H);
     }
     // Light sources stay bright through the dark.
+    if (dyn.tube) {
+      const { x0, x1, y } = dyn.tube;
+      const c = NEON[neonIdx];
+      const off = live && Math.sin(t * 17) > 0.985;
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = c;
+      ctx.fillRect(x0 - 3, y - 3, x1 - x0 + 6, 7);
+      ctx.globalAlpha = 0.35;
+      ctx.fillRect(x0 - 1, y - 1, x1 - x0 + 2, 3);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = off ? "#2A3A48" : "#EAFDFF";
+      ctx.fillRect(x0, y, x1 - x0, 1);
+    }
+    if (dyn.lava) {
+      const { x, top, bottom } = dyn.lava;
+      const pal = LAVA[lavaIdx];
+      const hgt = bottom - top;
+      ctx.globalAlpha = 0.16;
+      ctx.fillStyle = pal.glow;
+      ctx.fillRect(x - 7, top - 4, 15, hgt + 8);
+      ctx.globalAlpha = 1;
+      for (let j = 0; j <= hgt; j++) {
+        const w = Math.round(2 + (j / hgt) * 3);
+        ctx.fillStyle = pal.liquid;
+        ctx.fillRect(x - w + 1, top + j, w * 2 - 1, 1);
+      }
+      for (let i = 0; i < 3; i++) {
+        const k = live ? (Math.sin(t * (0.35 + i * 0.13) + i * 2.1) + 1) / 2 : 0.3 + i * 0.25;
+        const by = Math.round(bottom - 2 - k * (hgt - 5));
+        const bx = x + (i === 1 ? 1 : 0) - (i === 2 ? 1 : 0);
+        ctx.fillStyle = pal.blob;
+        ctx.fillRect(bx - 1, by - 1, 3, 3);
+        ctx.fillRect(bx, by - 2, 1, 5);
+        ctx.fillStyle = pal.hi;
+        ctx.fillRect(bx - 1, by - 1, 1, 1);
+      }
+      ctx.fillStyle = pal.blob;
+      ctx.fillRect(x - 3, bottom - 1, 7, 1);
+    }
     const kanji = dyn.neon.find((n) => n.room);
     if (kanji) {
       const off = live && Math.sin(t * 13) > 0.97 && Math.sin(t * 0.31) > 0.6;
@@ -1739,6 +1958,7 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
     notes = notes.filter((n) => t - n.born < 3);
     for (const n of notes) {
       const k = (t - n.born) / 3;
+      if (k < 0) continue;
       const x = Math.round(n.x + Math.sin(k * 6 + n.drift) * 2 + k * 4);
       const y = Math.round(n.y - k * 22);
       ctx.globalAlpha = 1 - k;
@@ -1868,6 +2088,27 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
       coffee = 3;
       refresh();
     },
+    strum() {
+      strumAt = performance.now() / 1000;
+      if (dyn?.guitar) {
+        const { gx, by } = dyn.guitar;
+        for (let i = 0; i < 3; i++) notes.push({ x: gx + 4 + i * 3, y: by - 18 - i * 3, born: performance.now() / 1000 + i * 0.15, c: i % 2 ? C.neonCyan : "#FFD58A", drift: i * 2 });
+      }
+      refresh();
+    },
+    cycleLava() {
+      lavaIdx = (lavaIdx + 1) % LAVA.length;
+      refresh();
+    },
+    cycleNeon() {
+      neonIdx = (neonIdx + 1) % NEON.length;
+      refresh();
+    },
+    cycleCeilingFan() {
+      ceilingFan = (ceilingFan + 1) % 3;
+      refresh();
+      return ceilingFan;
+    },
     pokeCat() {
       catPokeAt = performance.now() / 1000;
     },
@@ -1899,7 +2140,7 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
       return h ? { x: ((h.x0 + h.x1) / 2) * PX, y: ((h.y0 + h.y1) / 2) * PX } : null;
     },
     state() {
-      return { rain: rainOn, blinds: blindPos, music: musicOn, coffee, fan: fanIdx, fireflies: fireflies.length };
+      return { rain: rainOn, blinds: blindPos, music: musicOn, coffee, fan: fanIdx, fireflies: fireflies.length, ceilingFan, lava: lavaIdx, neon: neonIdx };
     },
   };
 }

@@ -26,7 +26,7 @@ initNotifications($("#toasts"));
 
 /* Scene — the wallpaper is decoration, so a failure must never stop the desktop. */
 const noop = () => {};
-let scene = { setAmbient: noop, setPaused: noop, setLamp: noop, setRain: noop, setBlinds: noop, setMusic: noop, sip: () => 0, refill: noop, pokeCat: noop, cycleFans: noop, water: noop, hitTest: () => null, hitsLamp: () => false, locate: () => null, state: () => ({}) };
+let scene = { setAmbient: noop, setPaused: noop, setLamp: noop, setRain: noop, setBlinds: noop, setMusic: noop, sip: () => 0, refill: noop, pokeCat: noop, strum: noop, cycleLava: noop, cycleNeon: noop, cycleCeilingFan: () => 0, cycleFans: noop, water: noop, hitTest: () => null, hitsLamp: () => false, locate: () => null, state: () => ({}) };
 try {
   scene = createScene($("#scene"), { lamp: prefs.get().lamp, rain: prefs.get().rain, blinds: prefs.get().blinds });
 } catch (err) {
@@ -132,6 +132,11 @@ function sceneLabel(id) {
     turntable: music.isPlaying() ? "Stop the record" : "Play a record",
     window: p.rain ? "Stop the rain" : "Let it rain",
     blinds: p.blinds ? "Raise the blinds" : "Lower the blinds",
+    guitar: "Strum the guitar",
+    lava: "Lava lamp — change colour",
+    neon: "Ceiling neon — change colour",
+    fan: ["Ceiling fan — turn on", "Ceiling fan — faster", "Ceiling fan — turn off"][st.ceilingFan ?? 1],
+    cyberposter: "About Titi",
   }[id];
 }
 
@@ -172,6 +177,24 @@ const SCENE_ACTIONS = {
     notify(left === 0 ? "Last sip. The mug is empty." : "A sip of coffee.", { icon: "kofi", tone: "warm", duration: 1800, sound: null });
   },
   turntable: toggleRecord,
+  guitar: () => {
+    scene.strum();
+    if (prefs.get().sound) music.strumSound();
+  },
+  lava: () => {
+    scene.cycleLava();
+    play("click");
+  },
+  neon: () => {
+    scene.cycleNeon();
+    play("click");
+  },
+  fan: () => {
+    const speed = scene.cycleCeilingFan();
+    play("click");
+    notify(["Ceiling fan off.", "Ceiling fan on.", "Ceiling fan, full speed."][speed], { icon: "settings", duration: 1600, sound: null });
+  },
+  cyberposter: () => apps.openAbout(),
   window: () => {
     const on = !prefs.get().rain;
     prefs.set({ rain: on });

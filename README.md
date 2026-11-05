@@ -119,7 +119,12 @@ scripts/check.mjs          pre-deploy checks
   | blind roll / closed blinds | lower or raise the blinds — fireflies come out in the dark |
   | record player | plays TITI FM, generative lo-fi composed live (`src/utils/music.js`, no audio files) |
   | PC | cycles fan colours |
-  | cat | pet it |
+  | cat (on the sill, backlit) | pet it |
+  | guitar on its stand | strum it |
+  | lava lamp | change its colour |
+  | ceiling neon | change its colour |
+  | ceiling fan | off / slow / fast |
+  | night-city poster | About |
   | plants | water them |
 
   Keyboard users get the same switches (rain, blinds, record player, music volume) in Settings. Hit zones live in `src/components/scene.js` (`hit(...)` calls) and their actions in `src/main.js` (`SCENE_ACTIONS`).

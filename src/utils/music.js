@@ -394,3 +394,34 @@ export function waterSound() {
     o.stop(tt + 0.12);
   }
 }
+
+/** A strummed E minor chord, plucked string by string. */
+export function strumSound() {
+  if (!ensure()) return;
+  wake();
+  const t0 = ctx.currentTime + 0.01;
+  [40, 47, 52, 55, 59, 64].forEach((n, i) => {
+    const t = t0 + i * 0.028;
+    const o = ctx.createOscillator();
+    o.type = "triangle";
+    o.frequency.value = midi(n);
+    const o2 = ctx.createOscillator();
+    o2.type = "sawtooth";
+    o2.frequency.value = midi(n) * 1.002;
+    const f = ctx.createBiquadFilter();
+    f.type = "lowpass";
+    f.frequency.setValueAtTime(3200, t);
+    f.frequency.exponentialRampToValueAtTime(500, t + 1.4);
+    const g = ctx.createGain();
+    env(g, t, 0.06, 0.004, 1.6);
+    const g2 = ctx.createGain();
+    g2.gain.value = 0.25;
+    o.connect(f);
+    o2.connect(g2).connect(f);
+    f.connect(g).connect(ambientBus);
+    [o, o2].forEach((x) => {
+      x.start(t);
+      x.stop(t + 1.8);
+    });
+  });
+}
