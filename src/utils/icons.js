@@ -1,5 +1,5 @@
 /**
- * Pixel icons, drawn by hand on a 16 × 16 grid.
+ * Pixel icons, drawn by hand on a 16 × 16 grid (24 × 24 for the project mascots).
  * Each character is one pixel; "." is transparent.
  * renderIcon() merges horizontal runs into <rect>s and returns an SVG string.
  */
@@ -19,6 +19,17 @@ const PALETTE = {
   s: "#94A08C",
   r: "#B8958A",
   R: "#7E625A",
+  // KOTONOHA's kitsune (from app/fox.js and app/theme.css)
+  c: "#FBF4E8",
+  C: "#EFDFC6",
+  n: "#241A13",
+  v: "#C8263A",
+  // MALSSI's magpie (from js/magpie.js)
+  b: "#1D2433",
+  o: "#46526E",
+  W: "#F4F5F0",
+  B: "#2F5D8A",
+  u: "#3D6EA8",
 };
 
 const MAPS = {
@@ -79,24 +90,59 @@ const MAPS = {
     "kkkkkkkkkkkkkkkk",
     "................",
   ],
-  // KOTONOHA — a leaf (言の葉, "leaves of words")
+  // KOTONOHA — Kitsune, the fox mask of the site, redrawn on a 24×24 grid
   kotonoha: [
-    "................",
-    "............kkk.",
-    "..........kkggk.",
-    "........kkggggk.",
-    "......kkggggglk.",
-    ".....kggggggglk.",
-    "....kgggggglggk.",
-    "....kggggglgggk.",
-    "...kggggGlgggGk.",
-    "...kgggGlggggk..",
-    "...kggGlggggk...",
-    "...kgGlgggkk....",
-    "...kGlgkkk......",
-    "..klkkk.........",
-    ".kl.............",
-    "kk..............",
+    "....k..............k....",
+    "...kck............kck...",
+    "...kcCk..........kCck...",
+    "...kcnck........kcnck...",
+    "...kCnCk........kCnCk...",
+    "...kCnnCk......kCnnCk...",
+    "...kCnnnck....kcnnnCk...",
+    "..kcCnnnCck..kcCnnnCck..",
+    "..kcCnnnCccccccCnnnCck..",
+    ".kcccccccccvvccccccccck.",
+    ".kccccccccCvvCcccccccck.",
+    ".kccccccCvcCCcvCcccccck.",
+    "kccccCvvvCnCCnCvvvCcccck",
+    "kccccccnnnnccnnnncccccck",
+    "kccccccccnnccnncccccccck",
+    ".kkkkcccccccccccccckkkk.",
+    ".....kvCccccccccCvk.....",
+    "......kvcCCCCCCcvk......",
+    ".......kccCCCCcck.......",
+    "........kccCCcck........",
+    ".........kcCCck.........",
+    "..........knnk..........",
+    "..........kCCk..........",
+    "...........kk...........",
+  ],
+  // MALSSI — the magpie (까치) of the site, redrawn on a 24×24 grid
+  malssi: [
+    "........................",
+    "........................",
+    "........kkkk............",
+    ".......kooook...........",
+    "......kWWbbbok..........",
+    "...kkkoWbbbbbok.........",
+    "..kooobbbbbbbbk.........",
+    "...kkkobbbbbbbk.........",
+    "....kobbbBuubbk.........",
+    "....kobbbbuuWBk.........",
+    "....kobbbbbbuWBk........",
+    "....kobuWuuWWWBk........",
+    ".....kobWWWWWWBk........",
+    ".....kobbuWWWubk........",
+    ".....kobbbbbbbbk........",
+    "......kkobbbbbbBk.......",
+    "........kobkkobbBk......",
+    "........kok..kkobBkk....",
+    ".......kobok...koboBk...",
+    "........kkk.....kkobBkk.",
+    "..................kobook",
+    "...................kkok.",
+    ".....................k..",
+    "........................",
   ],
   // TITI'S ROOM — a closed door, light under it
   room: [
@@ -254,9 +300,10 @@ const MAPS = {
 
 const cache = new Map();
 
-/** Pad or cut every row to 16 pixels so a typo can never break the grid. */
+/** Square grid (16 or 24 pixels); pad or cut every row so a typo can never break it. */
 function normalise(rows) {
-  return rows.map((row) => row.replace(/ /g, ".").padEnd(16, ".").slice(0, 16));
+  const n = rows.length > 16 ? 24 : 16;
+  return rows.map((row) => row.replace(/ /g, ".").padEnd(n, ".").slice(0, n));
 }
 
 export function renderIcon(name, { label = "" } = {}) {
@@ -264,22 +311,23 @@ export function renderIcon(name, { label = "" } = {}) {
   if (cache.has(key)) return cache.get(key);
   const rows = normalise(MAPS[name] || MAPS.text);
   let rects = "";
+  const n = rows.length;
   rows.forEach((row, y) => {
     let x = 0;
-    while (x < 16) {
+    while (x < n) {
       const ch = row[x];
       if (ch === "." || !PALETTE[ch]) {
         x += 1;
         continue;
       }
       let run = 1;
-      while (x + run < 16 && row[x + run] === ch) run += 1;
+      while (x + run < n && row[x + run] === ch) run += 1;
       rects += `<rect x="${x}" y="${y}" width="${run}" height="1" fill="${PALETTE[ch]}"/>`;
       x += run;
     }
   });
   const a11y = label ? `role="img" aria-label="${label}"` : `aria-hidden="true" focusable="false"`;
-  const svg = `<svg class="px-icon" viewBox="0 0 16 16" ${a11y} xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
+  const svg = `<svg class="px-icon" viewBox="0 0 ${n} ${n}" ${a11y} xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
   cache.set(key, svg);
   return svg;
 }
@@ -294,6 +342,7 @@ export const GLYPHS = {
   close: `<svg viewBox="0 0 12 12" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path fill="currentColor" d="M1 1h2v1h1v1h1v1h2V3h1V2h1V1h2v2h-1v1h-1v1H8v2h1v1h1v1h1v2H9v-1H8v-1H7V8H5v1H4v1H3v1H1V9h1V8h1V7h1V5H3V4H2V3H1z"/></svg>`,
   external: `<svg class="ext" viewBox="0 0 12 12" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path fill="currentColor" d="M5 1h6v6H9V4.4L4.4 9 3 7.6 7.6 3H5zM1 3h2v6h6v2H1z"/></svg>`,
   soundOn: `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path fill="currentColor" d="M2 6h3l3-3h1v10H8l-3-3H2zM11 5h1v1h1v4h-1v1h-1v-1h1V6h-1zM13 3h1v1h1v8h-1v1h-1v-1h1V4h-1z"/></svg>`,
+  soundLow: `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path fill="currentColor" d="M2 6h3l3-3h1v10H8l-3-3H2zM11 5h1v1h1v4h-1v1h-1v-1h1V6h-1z"/></svg>`,
   soundOff: `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path fill="currentColor" d="M2 6h3l3-3h1v10H8l-3-3H2zM11 6h1v1h1V6h1v1h-1v2h1v1h-1V9h-1v1h-1V9h1V7h-1z"/></svg>`,
   windows: `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path fill="currentColor" d="M4 2h10v8h-2V4H4zM2 6h8v8H2zm2 2v4h4V8z"/></svg>`,
 };

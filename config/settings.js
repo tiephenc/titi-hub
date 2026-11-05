@@ -51,6 +51,8 @@ export const DEFAULT_PREFS = {
   rain: true,
   blinds: false,
   musicVolume: 0.6,
+  volume: 0.8, // master volume, applies to every sound
+  muted: false,
 };
 
 export const SCALE_STEPS = [0.9, 1, 1.15, 1.3];

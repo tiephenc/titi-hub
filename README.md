@@ -123,6 +123,7 @@ scripts/check.mjs          pre-deploy checks
   | plants | water them |
 
   Keyboard users get the same switches (rain, blinds, record player, music volume) in Settings. Hit zones live in `src/components/scene.js` (`hit(...)` calls) and their actions in `src/main.js` (`SCENE_ACTIONS`).
+- **Volume:** the speaker in the taskbar opens a panel with the global volume (every sound goes through it), the music volume, room & interface sounds, Mute all and the record player. The same controls are in Settings.
 - **Sound:** interface sounds, rain, the cat and the coffee follow the Sound setting (off by default). The record player only plays after someone clicks it, and stops from the taskbar or Settings.
 
 - **Mouse:** click selects an icon, double-click opens it. **Touch and narrow screens (≤ 720 px):** one tap opens, windows become full-screen sheets, and the taskbar shows a window switcher instead of task buttons. Dragging is mouse-only, so touch scrolling is never captured.

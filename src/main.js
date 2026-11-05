@@ -6,7 +6,7 @@
 import { PROJECTS } from "../config/projects.js";
 import { $, isCompact } from "./utils/dom.js";
 import { createPrefs } from "./utils/prefs.js";
-import { setSoundEnabled, play } from "./utils/sound.js";
+import { setSoundEnabled, setMasterVolume as setUiVolume, play } from "./utils/sound.js";
 import * as music from "./utils/music.js";
 import { createScene } from "./components/scene.js";
 import { createWindowManager } from "./components/windowManager.js";
@@ -86,6 +86,9 @@ function applyPrefs(p) {
   }
   scene.setRain(p.rain);
   scene.setBlinds(p.blinds);
+  const master = p.muted ? 0 : p.volume;
+  setUiVolume(master);
+  music.setMasterVolume(master);
   music.setMusicVolume(p.musicVolume);
   syncAmbientSound(p);
 }

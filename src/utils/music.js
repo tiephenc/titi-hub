@@ -46,6 +46,8 @@ let playing = false;
 let step = 0;
 let nextTime = 0;
 let volume = 0.6;
+let masterLevel = 0.8;
+const MASTER_GAIN = 1.5;
 const listeners = new Set();
 
 function ensure() {
@@ -55,7 +57,7 @@ function ensure() {
     if (!AC) return null;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = 1.5;
+    master.gain.value = MASTER_GAIN * masterLevel;
     master.connect(ctx.destination);
 
     // Music: everything goes through a warm low-pass and a gentle compressor.
@@ -296,6 +298,15 @@ export function setMusicVolume(v) {
     musicBus.gain.setTargetAtTime(Math.max(0.0001, volume), ctx.currentTime, 0.08);
   }
   emit();
+}
+
+/** Master volume, 0–1: music and every ambient sound go through it. */
+export function setMasterVolume(v) {
+  masterLevel = Math.max(0, Math.min(1, Number(v) || 0));
+  if (ctx && master) {
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setTargetAtTime(MASTER_GAIN * masterLevel, ctx.currentTime, 0.05);
+  }
 }
 
 /** Rain ambience: filtered noise, only while Sound is on. */

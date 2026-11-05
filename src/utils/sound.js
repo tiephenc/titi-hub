@@ -5,6 +5,12 @@
  */
 let ctx = null;
 let enabled = false;
+let masterLevel = 0.8;
+
+/** Master volume, 0–1. Scales every interface sound. */
+export function setMasterVolume(v) {
+  masterLevel = Math.max(0, Math.min(1, Number(v) || 0));
+}
 
 const PATTERNS = {
   open: [[660, 0.05], [990, 0.06]],
@@ -29,7 +35,7 @@ export function setSoundEnabled(on) {
 }
 
 export function play(name) {
-  if (!enabled || !ctx) return;
+  if (!enabled || !ctx || masterLevel < 0.01) return;
   const notes = PATTERNS[name];
   if (!notes) return;
   try {
@@ -40,7 +46,7 @@ export function play(name) {
       osc.type = "square";
       osc.frequency.value = freq;
       gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.035, t + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.035 * masterLevel, t + 0.006);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       osc.connect(gain).connect(ctx.destination);
       osc.start(t);

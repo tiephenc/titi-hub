@@ -956,3 +956,80 @@
 .range:focus-visible {
   outline-offset: 3px;
 }
+
+/* Splash: MALSSI — the magpie, 말씨 on manuscript squares, the levels */
+.splash--magpie {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1.25rem 0 0.75rem;
+  background:
+    linear-gradient(180deg, transparent 0 78%, rgb(47 93 138 / 0.18) 78% 100%),
+    #E6EAE1;
+}
+
+.splash--magpie .magpie {
+  width: 7.5rem;
+  height: 7.5rem;
+  flex: none;
+}
+
+.wongo {
+  display: grid;
+  grid-template-rows: repeat(3, 2.125rem);
+  border: 2px solid #1E2B45;
+}
+
+.wongo span {
+  display: grid;
+  place-items: center;
+  width: 2.125rem;
+  border-bottom: 1px solid rgb(30 43 69 / 0.3);
+  font-family: "Gowun Batang", "Noto Serif KR", "Nanum Myeongjo", "AppleMyungjo", serif;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #1E2B45;
+}
+
+.wongo span:last-child {
+  border-bottom: 0;
+}
+
+.levels--ko {
+  margin-left: auto;
+  color: #2F5D8A;
+}
+
+.levels--ko b {
+  border-color: #2F5D8A;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+}
+
+.levels--ko li + li::before {
+  background: repeating-linear-gradient(90deg, #2F5D8A 0 4px, transparent 4px 6px);
+}
+
+.levels--ko li:last-child b {
+  color: #E6EAE1;
+  background: #2F5D8A;
+  border-color: #2F5D8A;
+}
+
+@media (max-width: 720px) {
+  .splash--magpie {
+    gap: 0.625rem;
+    padding: 0 0.875rem 0 0.25rem;
+  }
+
+  .splash--magpie .magpie {
+    width: 5.75rem;
+    height: 5.75rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .levels--ko li:nth-child(2) {
+    display: none;
+  }
+}

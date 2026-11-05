@@ -32,6 +32,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+JP:wght@400;500&family=Pixelify+Sans:wght@400&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&text=%EB%A7%90%EC%94%A8&display=swap">
 
   <link rel="stylesheet" href="src/styles/base.css">
   <link rel="stylesheet" href="src/styles/desktop.css">
@@ -73,7 +74,7 @@
     <div class="tb-tray">
       <span class="tray-status" role="status"><span class="status-led" aria-hidden="true"></span><span class="tray-status__label">online</span></span>
       <button class="tray-btn tray-music" type="button" aria-label="Stop the record" title="TITI FM — stop the record" aria-pressed="false" hidden><svg class="glyph" viewBox="0 0 16 16" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path fill="currentColor" d="M5 1h6v1h2v2h1v2h1v4h-1v2h-1v2h-2v1H5v-1H3v-2H2v-2H1V6h1V4h1V2h2zm2 5v1H6v2h1v1h2V9h1V7H9V6z"/><path fill="#FF4FA0" d="M7 7h2v2H7z"/></svg><span class="eq ambient" aria-hidden="true"><i></i><i></i><i></i></span></button>
-      <button class="tray-btn tray-sound" type="button" aria-label="Interface sound" aria-pressed="false"></button>
+      <button class="tray-btn tray-sound" type="button" aria-label="Volume" aria-expanded="false" aria-controls="volume-panel"></button>
       <button class="tray-btn tray-kofi" type="button" aria-label="Support my work on Ko-fi" title="Support my work"></button>
       <button class="tray-btn tray-clock mono" type="button"><time>--:--</time></button>
     </div>
@@ -81,6 +82,27 @@
 
   <div id="start-menu" class="popover" hidden></div>
   <div id="switcher" class="popover" hidden></div>
+  <section id="volume-panel" class="popover volume-panel" aria-labelledby="volume-title" hidden>
+    <h2 id="volume-title" class="volume-panel__title">Volume</h2>
+    <div class="vol-row">
+      <label class="vol-label" for="vol-master">All sounds</label>
+      <input id="vol-master" class="range" type="range" min="0" max="100" step="5">
+      <output class="vol-value" for="vol-master"></output>
+    </div>
+    <div class="vol-row">
+      <label class="vol-label" for="vol-music">Music</label>
+      <input id="vol-music" class="range" type="range" min="0" max="100" step="5">
+      <output class="vol-value" for="vol-music"></output>
+    </div>
+    <div class="vol-row vol-row--switch">
+      <span class="vol-label" id="vol-sounds-label">Room &amp; interface sounds</span>
+      <button id="vol-sounds" class="switch" type="button" role="switch" aria-labelledby="vol-sounds-label"></button>
+    </div>
+    <div class="vol-actions">
+      <button id="vol-mute" class="btn btn--ghost notched" type="button"></button>
+      <button id="vol-record" class="btn btn--ghost notched" type="button"></button>
+    </div>
+  </section>
   <div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
   <div id="scene-tip" class="scene-tip" role="tooltip" hidden></div>
 

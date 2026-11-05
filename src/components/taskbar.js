@@ -7,6 +7,7 @@ import { h, frag } from "../utils/dom.js";
 import { renderIcon, GLYPHS } from "../utils/icons.js";
 import { createMenu, menuItem } from "./menu.js";
 import { notify } from "./notify.js";
+import * as music from "../utils/music.js";
 
 const glyph = (name) => frag(`<span class="glyph">${renderIcon(name)}</span>`);
 
@@ -130,19 +131,89 @@ export function createTaskbar({ root, startPanel, switchPanel, wm, apps, prefs }
   window.addEventListener("offline", () => renderStatus(true));
   renderStatus(false);
 
-  /* Tray: sound */
-  function renderSound(p) {
-    soundBtn.innerHTML = p.sound ? GLYPHS.soundOn : GLYPHS.soundOff;
-    soundBtn.setAttribute("aria-pressed", String(p.sound));
-    soundBtn.title = p.sound ? "Sound on" : "Sound off";
+  /* Tray: global volume — the speaker opens a small panel. */
+  const volPanel = document.getElementById("volume-panel");
+  const volMaster = document.getElementById("vol-master");
+  const volMusic = document.getElementById("vol-music");
+  const volSounds = document.getElementById("vol-sounds");
+  const volMute = document.getElementById("vol-mute");
+  const volRecord = document.getElementById("vol-record");
+  const outputs = volPanel.querySelectorAll(".vol-value");
+
+  function renderVolume() {
+    const p = prefs.get();
+    const level = p.muted ? 0 : p.volume;
+    const pct = Math.round(level * 100);
+    soundBtn.innerHTML = level < 0.01 ? GLYPHS.soundOff : level < 0.5 ? GLYPHS.soundLow : GLYPHS.soundOn;
+    const label = p.muted ? "Volume: muted" : `Volume: ${pct}%`;
+    soundBtn.setAttribute("aria-label", label);
+    soundBtn.title = label;
+    soundBtn.classList.toggle("is-muted", level < 0.01);
+    if (document.activeElement !== volMaster) volMaster.value = String(Math.round(p.volume * 100));
+    if (document.activeElement !== volMusic) volMusic.value = String(Math.round(p.musicVolume * 100));
+    volMaster.style.setProperty("--fill", Math.round(p.volume * 100) + "%");
+    volMusic.style.setProperty("--fill", Math.round(p.musicVolume * 100) + "%");
+    volMaster.setAttribute("aria-valuetext", p.muted ? "muted" : Math.round(p.volume * 100) + "%");
+    volMusic.setAttribute("aria-valuetext", Math.round(p.musicVolume * 100) + "%");
+    outputs[0].textContent = p.muted ? "mute" : Math.round(p.volume * 100) + "%";
+    outputs[1].textContent = Math.round(p.musicVolume * 100) + "%";
+    volMaster.closest(".vol-row").classList.toggle("is-muted", p.muted);
+    volSounds.setAttribute("aria-checked", String(p.sound));
+    volMute.textContent = p.muted ? "Unmute" : "Mute all";
+    volMute.setAttribute("aria-pressed", String(p.muted));
+    volRecord.textContent = music.isPlaying() ? "Stop the record" : "Play a record";
   }
-  soundBtn.addEventListener("click", () => {
+
+  function openVolume() {
+    closeMenus();
+    volPanel.hidden = false;
+    soundBtn.setAttribute("aria-expanded", "true");
+    volPanel.classList.remove("is-opening");
+    void volPanel.offsetWidth;
+    volPanel.classList.add("is-opening");
+    renderVolume();
+    volMaster.focus();
+  }
+  function closeVolume({ returnFocus = false } = {}) {
+    if (volPanel.hidden) return;
+    volPanel.hidden = true;
+    soundBtn.setAttribute("aria-expanded", "false");
+    if (returnFocus) soundBtn.focus();
+  }
+  function closeMenus() {
+    start.close();
+    switcher.close();
+  }
+
+  soundBtn.addEventListener("click", () => (volPanel.hidden ? openVolume() : closeVolume()));
+  volMaster.addEventListener("input", () => prefs.set({ volume: Number(volMaster.value) / 100, muted: false }));
+  volMusic.addEventListener("input", () => prefs.set({ musicVolume: Number(volMusic.value) / 100 }));
+  volSounds.addEventListener("click", () => {
     const on = !prefs.get().sound;
-    prefs.set({ sound: on });
-    notify(on ? "Sound on." : "Sound off.", { icon: "settings", sound: on ? "notify" : null, duration: 1800 });
+    prefs.set({ sound: on, ...(on ? { muted: false } : {}) });
   });
-  prefs.subscribe(renderSound);
-  renderSound(prefs.get());
+  volMute.addEventListener("click", () => prefs.set({ muted: !prefs.get().muted }));
+  volRecord.addEventListener("click", () => {
+    const on = music.toggleMusic();
+    if (on && prefs.get().muted) prefs.set({ muted: false });
+    renderVolume();
+  });
+  volPanel.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      closeVolume({ returnFocus: true });
+    }
+  });
+  document.addEventListener("pointerdown", (e) => {
+    if (volPanel.hidden || volPanel.contains(e.target) || soundBtn.contains(e.target)) return;
+    closeVolume();
+  });
+  startBtn.addEventListener("click", () => closeVolume());
+  switchBtn.addEventListener("click", () => closeVolume());
+  prefs.subscribe(renderVolume);
+  music.onMusicChange(renderVolume);
+  renderVolume();
 
   /* Tray: Ko-fi */
   kofiBtn.addEventListener("click", (e) => apps.openSupport(e.currentTarget));

@@ -102,6 +102,30 @@ export const PROJECTS = [
     splash: "genko",
   },
   {
+    id: "malssi",
+    name: "MALSSI",
+    file: "malssi.app",
+    tagline: "말씨 — learn Korean from hangeul to TOPIK II",
+    description:
+      "KOTONOHA's sister site, for Korean: a path of units from hangeul to TOPIK II, in French, with spaced repetition and vocabulary checked against the Korean basic dictionary. Installable, and it works offline.",
+    contents: [
+      "Hangeul",
+      "Units from 1급 to 6급",
+      "Spaced repetition (FSRS)",
+      "Verified vocabulary",
+      "Anki deck import",
+      "Focus timer",
+      "Works offline",
+    ],
+    // Not reachable yet (GitHub Pages returns 404). Once it is live, paste
+    // https://tiephenc.github.io/MALSSI/ here and set status to "online".
+    url: "",
+    status: "link-pending",
+    icon: "malssi",
+    accent: "#2F5D8A",
+    splash: "magpie",
+  },
+  {
     id: "room",
     name: "TITI'S ROOM",
     file: "titis_room.app",

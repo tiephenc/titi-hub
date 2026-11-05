@@ -16,6 +16,9 @@ const external = (label) => [label, frag(GLYPHS.external), h("span", { class: "v
 
 /* ------------------------------------------------------------- splashes */
 
+// MALSSI's magpie, as drawn for that site (js/magpie.js).
+const MAGPIE_SVG = `<svg class="magpie" viewBox="0 0 100 100" focusable="false"><path d="M58 64 L96 90 L90 94 L54 70Z" fill="#1d2433"/><path d="M60 66 L93 89" stroke="#3d6ea8" stroke-width="2" opacity=".7"/><path d="M30 38 C30 24 42 18 52 22 C60 25 63 33 62 42 L66 62 C60 74 42 76 33 66 C27 58 28 46 30 38Z" fill="#1d2433"/><path d="M36 52 C40 64 54 68 63 60 L62 46 C56 54 44 56 36 52Z" fill="#f4f5f0"/><path d="M44 40 C52 38 60 44 62 52 C56 50 49 49 44 46Z" fill="#2f5d8a"/><path d="M46 44 C52 43 57 46 59 50" stroke="#f4f5f0" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M30 31 L18 34 L30 37Z" fill="#1d2433"/><circle cx="38" cy="30" r="3.4" fill="#f4f5f0"/><circle cx="38.6" cy="30.2" r="1.8" fill="#1d2433"/><path d="M44 72 L42 82 M50 73 L50 83" stroke="#1d2433" stroke-width="2.4" stroke-linecap="round"/><path d="M38 82 L46 82 M46 83 L54 83" stroke="#1d2433" stroke-width="2" stroke-linecap="round"/></svg>`;
+
 const SPLASHES = {
   editorial: (p) =>
     h(
@@ -63,6 +66,19 @@ const SPLASHES = {
         "ol",
         { class: "levels" },
         ["N4", "N3", "N2"].map((n) => h("li", {}, h("b", {}, n)))
+      )
+    ),
+
+  magpie: () =>
+    h(
+      "div",
+      { class: "splash splash--magpie", "aria-hidden": "true" },
+      frag(MAGPIE_SVG),
+      h("div", { class: "wongo" }, ["말", "씨", ""].map((c) => h("span", { lang: "ko" }, c))),
+      h(
+        "ol",
+        { class: "levels levels--ko" },
+        ["한글", "1급", "6급"].map((n) => h("li", { lang: "ko" }, h("b", {}, n)))
       )
     ),
 
@@ -369,6 +385,22 @@ export function createApps({ wm, prefs }) {
           volume.setAttribute("aria-valuetext", v + "%");
         });
 
+        const master = h("input", {
+          class: "range",
+          type: "range",
+          min: "0",
+          max: "100",
+          step: "5",
+          "aria-labelledby": "set-Volume",
+          oninput: (e) => prefs.set({ volume: Number(e.target.value) / 100, muted: false }),
+        });
+        switches.push(() => {
+          const v = Math.round(prefs.get().volume * 100);
+          if (document.activeElement !== master) master.value = String(v);
+          master.style.setProperty("--fill", v + "%");
+          master.setAttribute("aria-valuetext", prefs.get().muted ? "muted" : v + "%");
+        });
+
         const motionHelp = h("span");
         switches.push(() => {
           motionHelp.textContent =
@@ -394,6 +426,7 @@ export function createApps({ wm, prefs }) {
               get: () => music.isPlaying(),
               set: () => music.toggleMusic(),
             }),
+            row("Volume", "Every sound on this desktop.", master),
             row("Music volume", null, volume),
             row("Interface scale", "Size of text, icons and windows.", scaleGroup),
             row(
@@ -591,6 +624,7 @@ export function createApps({ wm, prefs }) {
             line("blinds", p.blinds ? "down — fireflies out" : "up"),
             line("record", music.isPlaying() ? "TITI FM, side A" : "stopped", music.isPlaying() ? "ok" : "v"),
             line("sound", p.sound ? "on" : "off"),
+            line("volume", p.muted ? "muted" : Math.round(p.volume * 100) + "%"),
             h("p", { class: "k" }, "› everything in the room answers to a click. try the cat.")
           );
         };
