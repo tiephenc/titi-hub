@@ -1100,18 +1100,20 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
     hit("cyberposter", x - 1, y - 1, x + w + 1, y + h + 1);
   }
 
-  /** Neon rim on a plant pot; it keeps glowing when the room goes dark. */
+  /** A plain plant pot: terracotta, ceramic or stone, picked from the old neon colour. */
+  const POTS = {
+    [C.neonPink]: ["#9A5A44", "#C07A5A", "#6A3A2E"],
+    [C.neonCyan]: ["#C9C3D8", "#E6E1F0", "#8A84A0"],
+    "#B27CFF": ["#5E6A72", "#7E8A92", "#3E474E"],
+  };
   function neonPot(P, x, y, w, h, c) {
-    P.glow(x + w / 2, y + h / 2, w + 5, c, 0.22);
-    P.hline(x, x + w - 1, y, c);
-    P.hline(x + 1, x + w - 2, y + h - 1, c);
-    P.vline(x, y, y + h - 2, c);
-    P.vline(x + w - 1, y, y + h - 2, c);
-    const pix = [];
-    for (let i = x; i < x + w; i++) pix.push([i, y]);
-    for (let i = x + 1; i < x + w - 1; i++) pix.push([i, y + h - 1]);
-    for (let j = y; j < y + h - 1; j++) pix.push([x, j], [x + w - 1, j]);
-    dyn.pots.push({ pix, c });
+    const [body, lit, dark] = POTS[c] || POTS[C.neonPink];
+    P.rect(x, y, w, h, body);
+    P.hline(x, x + w - 1, y, lit);
+    P.vline(x, y, y + h - 1, lit);
+    P.vline(x + w - 1, y + 1, y + h - 1, dark);
+    P.hline(x + 1, x + w - 2, y + h - 1, dark);
+    P.hline(x + 1, x + w - 2, y + h, C.outline);
   }
 
   /** A potted plant in a neon pot. kind: snake | round | pothos | fern */
@@ -1627,6 +1629,12 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
         P.hline(lx - 4 + Math.abs(k), lx + 4 - Math.abs(k), ly, k < 0 ? C.leafLit : C.leaf);
       }
     }
+    // Its pot, in front of the stems.
+    P.poly([[x - 8, d - 4], [x + 9, d - 4], [x + 7, d + 10], [x - 6, d + 10]], "#9A5A44");
+    P.hline(x - 9, x + 9, d - 5, "#C07A5A");
+    P.hline(x - 9, x + 9, d - 4, "#C07A5A");
+    P.vline(x - 7, d - 3, d + 8, "#B06A4E");
+    P.hline(x - 6, x + 7, d + 10, "#6A3A2E");
   }
 
   /* ---------------------------------------------------------- per frame */
@@ -1952,10 +1960,6 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
       ctx.fillRect(0, 0, W, H);
     }
     // Light sources stay bright through the dark.
-    for (const pot of dyn.pots) {
-      ctx.fillStyle = pot.c;
-      for (const [x, y] of pot.pix) ctx.fillRect(x, y, 1, 1);
-    }
     if (dyn.tube) {
       const { x0, x1, y } = dyn.tube;
       const c = NEON[neonIdx];
