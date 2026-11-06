@@ -46,7 +46,7 @@ Statuses:
 ### Personal links and the About text — `config/settings.js`
 
 - `SITE.kofiUrl` — the Ko-fi page. Set it to `""` and the button is disabled with a note.
-- `SITE.githubUrl` — shown in About and `/ABOUT/github.url`.
+- `SITE.instagramUrl` — shown in About and `/ABOUT/instagram.url`; TITI'S ROOM also opens it for now.
 - `ABOUT` — the text of the About window. Only put published facts here.
 
 ## Publishing

@@ -192,8 +192,8 @@ export function createApps({ wm, prefs }) {
       opener,
       build(body) {
         const links = [];
-        if (SITE.githubUrl) {
-          links.push(h("a", { class: "btn notched", href: SITE.githubUrl, target: "_blank", rel: "noopener" }, external("GitHub")));
+        if (SITE.instagramUrl) {
+          links.push(h("a", { class: "btn notched", href: SITE.instagramUrl, target: "_blank", rel: "noopener" }, external("Instagram")));
         }
         links.push(
           h("button", { class: "btn btn--ghost notched", type: "button", onclick: (e) => openSupport(e.currentTarget) }, "Support my work")
@@ -485,7 +485,7 @@ export function createApps({ wm, prefs }) {
       open: (el) => openProject(p.id, el),
     });
     const aboutEntries = [{ name: "about_titi.txt", icon: "about", meta: "text", open: (el) => openAbout(el) }];
-    if (SITE.githubUrl) aboutEntries.push({ name: "github.url", icon: "link", meta: "github.com", href: SITE.githubUrl });
+    if (SITE.instagramUrl) aboutEntries.push({ name: "instagram.url", icon: "link", meta: "@tiephen_", href: SITE.instagramUrl });
     aboutEntries.push({ name: "system.log", icon: "text", meta: "log", open: (el) => openLog(el) });
 
     return [

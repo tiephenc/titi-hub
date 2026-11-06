@@ -14,7 +14,7 @@ export const SITE = {
   // Support page. Taken from the Kotonoha README; replace if it changes.
   kofiUrl: "https://ko-fi.com/tiephenchauvin",
 
-  githubUrl: "https://github.com/tiephenc",
+  instagramUrl: "https://www.instagram.com/tiephen_/",
 };
 
 /**

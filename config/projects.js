@@ -127,7 +127,7 @@ export const PROJECTS = [
     id: "room",
     name: "TITI'S ROOM",
     file: "titis_room.app",
-    tagline: "A personal website and creative space",
+    tagline: "My personal space — on Instagram for now",
     description:
       "The room where the personal things will live: photographs, writing, films, music and experiments.",
     contents: [
@@ -139,8 +139,8 @@ export const PROJECTS = [
       "Personal projects",
       "Discoveries and interests",
     ],
-    url: "",
-    status: "coming-soon",
+    url: "https://www.instagram.com/tiephen_/",
+    status: "online",
     icon: "room",
     accent: "#B8958A",
     splash: "door",

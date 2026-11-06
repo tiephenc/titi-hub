@@ -549,6 +549,7 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
     hits = [];
     dyn = {
       fairy: [],
+      pots: [],
       waters: [],
       blind: null,
       mug: null,
@@ -1017,6 +1018,7 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
       P.hline(x0 + 1, x1 - 2, y + 3, "#4FEAF2");
       P.glow((x0 + x1) / 2, y + 6, (x1 - x0) * 0.6, "#4FEAF2", 0.1, { ry: 8 });
       hit("clock", clx, y - 11, clx + 20, y);
+      neonPot(P, px, y - 5, 5, 5, "#B27CFF");
       hit("plant", px - 2, y - 10, px + 8, y + 14);
     }
 
@@ -1098,6 +1100,64 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
     hit("cyberposter", x - 1, y - 1, x + w + 1, y + h + 1);
   }
 
+  /** Neon rim on a plant pot; it keeps glowing when the room goes dark. */
+  function neonPot(P, x, y, w, h, c) {
+    P.glow(x + w / 2, y + h / 2, w + 5, c, 0.22);
+    P.hline(x, x + w - 1, y, c);
+    P.hline(x + 1, x + w - 2, y + h - 1, c);
+    P.vline(x, y, y + h - 2, c);
+    P.vline(x + w - 1, y, y + h - 2, c);
+    const pix = [];
+    for (let i = x; i < x + w; i++) pix.push([i, y]);
+    for (let i = x + 1; i < x + w - 1; i++) pix.push([i, y + h - 1]);
+    for (let j = y; j < y + h - 1; j++) pix.push([x, j], [x + w - 1, j]);
+    dyn.pots.push({ pix, c });
+  }
+
+  /** A potted plant in a neon pot. kind: snake | round | pothos | fern */
+  function neonPlant(P, x, base, kind, c) {
+    const L1 = C.leafLit, L0 = C.leaf, D = C.leafDark;
+    const pw = kind === "pothos" ? 7 : 6;
+    P.rect(x, base - 5, pw, 5, "#14101E");
+    if (kind === "snake") {
+      [[1, 9], [2, 12], [3, 10], [4, 8]].forEach(([dx, h]) => {
+        P.vline(x + dx, base - 5 - h, base - 6, "#2E6A50");
+        P.px(x + dx, base - 5 - h, "#B9E6C8");
+        if (h > 9) P.px(x + dx, base - 5 - Math.floor(h / 2), "#C8E68A");
+      });
+    } else if (kind === "round") {
+      for (let j = -4; j <= 0; j++) for (let i = -3; i <= 3; i++) if (i * i + j * j * 2 < 14) P.px(x + 3 + i, base - 7 + j, (i + j) % 2 ? L1 : L0);
+      P.px(x + 3, base - 11, "#FF7FBE");
+    } else if (kind === "pothos") {
+      [[1, -7], [3, -9], [5, -7], [2, -10], [4, -6]].forEach(([dx, dy], i) => P.rect(x + dx, base + dy, 2, 2, i % 2 ? L1 : L0));
+      for (let k = 0; k < 9; k++) P.px(x - 1 - (k > 5 ? 1 : 0), base - 4 + k, k % 2 ? L1 : D);
+      for (let k = 0; k < 6; k++) P.px(x + pw, base - 3 + k, k % 2 ? L0 : L1);
+    } else {
+      for (let k = 0; k < 5; k++) {
+        const a = -Math.PI / 2 + (k - 2) * 0.45;
+        for (let r = 2; r < 10; r++) P.px(Math.round(x + 3 + Math.cos(a) * r), Math.round(base - 6 + Math.sin(a) * r), r % 2 ? L1 : L0);
+      }
+    }
+    neonPot(P, x, base - 5, pw, 5, c);
+    hit("plant", x - 3, base - 18, x + pw + 3, base);
+  }
+
+  function paintNeonPlants(P) {
+    const { win } = L;
+    const w = win.x1 - win.x0;
+    const sill = win.y1 + 3;
+    const desk = L.deskY + 3;
+    if (L.portrait) {
+      neonPlant(P, Math.round(win.x0 + w * 0.3), sill, "snake", C.neonCyan);
+      neonPlant(P, Math.round(W * 0.22), desk, "round", C.neonPink);
+    } else {
+      neonPlant(P, Math.round(win.x0 + w * 0.12), sill, "snake", C.neonCyan);
+      neonPlant(P, Math.round(W * 0.43), desk, "pothos", C.neonPink);
+      neonPlant(P, Math.round(win.x0 + w * 0.79), sill, "fern", "#B27CFF");
+      neonPlant(P, Math.round(L.turntable.x + L.turntable.w - 20), L.deskY + 12, "round", C.neonPink);
+    }
+  }
+
   function paintHangingPlant(P) {
     if (!L.hang) return;
     const { x } = L.hang;
@@ -1111,6 +1171,7 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
     P.hline(x - 5, x + 5, potY, C.potLit);
     P.vline(x - 5, potY, potY + 5, C.potLit);
     P.hline(x - 4, x + 4, potY + 6, C.outline);
+    neonPot(P, x - 5, potY, 11, 6, "#B27CFF");
     [[-4, -2], [-2, -3], [0, -4], [2, -3], [4, -2], [-3, -1], [3, -1], [1, -2], [-1, -2], [5, -1], [-5, -1]].forEach(([dx, dy], i) =>
       P.px(x + dx, potY + dy, i % 2 ? C.leafLit : C.leaf)
     );
@@ -1181,8 +1242,9 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
     P.rect(p1, sy - 4, 7, 4, C.pot);
     P.hline(p1, p1 + 6, sy - 4, C.potLit);
     [[0, -5], [1, -6], [2, -7], [3, -6], [4, -7], [5, -6], [6, -5], [2, -5], [4, -5], [3, -8]].forEach(([dx, dy], i) => P.px(p1 + dx, sy + dy, i % 3 ? C.leafLit : C.leaf));
+    neonPot(P, p1, sy - 4, 7, 4, C.neonPink);
     hit("plant", p1 - 1, sy - 9, p1 + 8, sy);
-    const p2 = Math.round(win.x0 + w * 0.27);
+    const p2 = Math.round(win.x0 + w * (L.portrait ? 0.55 : 0.36));
     P.rect(p2, sy - 4, 5, 4, "#7A5A6A");
     P.hline(p2, p2 + 4, sy - 4, "#9A7A8A");
     P.rect(p2 + 1, sy - 12, 3, 8, C.leaf);
@@ -1192,7 +1254,9 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
     P.rect(p2 + 4, sy - 8, 2, 1, C.leaf);
     P.vline(p2 + 5, sy - 10, sy - 8, C.leafLit);
     P.px(p2 + 2, sy - 13, "#FF7FBE");
+    neonPot(P, p2, sy - 4, 5, 4, C.neonCyan);
     hit("plant", p2 - 2, sy - 14, p2 + 7, sy);
+    paintNeonPlants(P);
     // Fairy lights along the top of the window.
     for (let x = win.x0 - 2; x < win.x1 + 2; x++) {
       const t = (x - win.x0) / w;
@@ -1326,6 +1390,7 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
     P.rect(x + 4, y - 8, 2, 1, "#2E6A50");
     P.vline(x + 5, y - 11, y - 8, "#4A9A6E");
     [[2, -12], [1, -9], [3, -7], [2, -6]].forEach(([dx, dy]) => P.px(x + dx, y + dy, "#B9E6C8"));
+    neonPot(P, x, y - 4, 5, 4, C.neonCyan);
     hit("plant", x - 2, y - 14, x + 7, y);
   }
 
@@ -1887,6 +1952,10 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
       ctx.fillRect(0, 0, W, H);
     }
     // Light sources stay bright through the dark.
+    for (const pot of dyn.pots) {
+      ctx.fillStyle = pot.c;
+      for (const [x, y] of pot.pix) ctx.fillRect(x, y, 1, 1);
+    }
     if (dyn.tube) {
       const { x0, x1, y } = dyn.tube;
       const c = NEON[neonIdx];
@@ -1971,6 +2040,18 @@ export function createScene(canvas, { lamp = true, rain = true, blinds = false }
     // Fireflies.
     const ff = Math.max(0, (blindPos - 0.25) / 0.75);
     if (ff > 0) {
+      // Their light falls softly on the room around them.
+      ctx.globalCompositeOperation = "lighter";
+      for (const f of fireflies) {
+        const glow = (0.55 + 0.45 * Math.sin(t * 1.7 + f.p)) * ff;
+        const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, 20);
+        g.addColorStop(0, `rgba(70, 190, 230, ${0.2 * glow})`);
+        g.addColorStop(0.5, `rgba(50, 120, 200, ${0.07 * glow})`);
+        g.addColorStop(1, "rgba(40, 80, 180, 0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(Math.round(f.x) - 20, Math.round(f.y) - 20, 40, 40);
+      }
+      ctx.globalCompositeOperation = "source-over";
       for (const f of fireflies) {
         if (live) {
           f.a += (Math.random() - 0.5) * dt * 4;
